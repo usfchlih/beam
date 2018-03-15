@@ -6,39 +6,6 @@ import org.matsim.core.api.experimental.events.EventsManager
 import org.matsim.core.events.handler.BasicEventHandler
 
 
-// TODO
-// what functions does RHM need?
-
-/*
-
-
-
-
-
-
-def mainRepositioningAlgorithm(time){
-  for (vehicle <- idlingVehicle){
-    val force=getForceAt(vehicle.location, time + 5min);
-
-    vehicle.repositionTo(force.endCoordinate);
-  }
-}
-
-
-
-
-def sumOfForces(force: Seq[Force]):Force{
-
-}
-
-
-
-
-*
- */
-
-
-  // previousIteration.getWaiting()
 
 case class WaitingEvent(location: SpaceTime, waitingDuration: Double)
 
@@ -64,14 +31,4 @@ class LocationWaitingTimeMatrix(val waitingEvents: Set[WaitingEvent]){
 
 
 
-
-class IterationHistory(){
-
-
-}
-
-
-
-// TODO: collect location, when, waiting time info.
-// TODO: collect location, when idling time.
 
