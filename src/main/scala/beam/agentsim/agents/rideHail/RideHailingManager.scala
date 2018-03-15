@@ -569,7 +569,10 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
   // TODO: implement methods for use by resource allocation manager
 
-  def getFleetInfo() = ??? // this needs to give back all TNCs (e.g. vector of case class VehicleState(vehicleId, location,stateOfCharge, batteryCapacity, energyConsumptionPerMeter, isAvailable)
+  def getAllTNCs():Vector[VehicleState] = ???
+
+  def getIdlingTNCs():Vector[VehicleState] = ???
+
 
   def getEstimatedLinkTravelTimesWithAdditionalLoad(linkLoads:Vector[LinkLoad]):TravelTimeCalculator = ??? // TODO: implement this method (e.g. use approximation using performance function)
 
@@ -585,6 +588,8 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 /**
   * BEAM
   */
+
+case class VehicleState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInkWh: Double, energyConsumptionPerMeter: Double)
 
 case class LinkLoad(startTime:Double, linkIds:Vector[Id[Link]])
 
