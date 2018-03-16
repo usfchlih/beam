@@ -599,7 +599,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
   def moveIdleTNCTo(vehicleId: Id[Vehicle], coord: Coord) = ???
 
-
+  // TODO: queue all quries which arrive before timeout
 
 }
 
