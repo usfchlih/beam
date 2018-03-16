@@ -574,7 +574,25 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   def getIdlingTNCs():Vector[VehicleState] = ???
 
 
-  def getEstimatedLinkTravelTimesWithAdditionalLoad(linkLoads:Vector[LinkLoad]):TravelTimeCalculator = ??? // TODO: implement this method (e.g. use approximation using performance function)
+  def getEstimatedLinkTravelTimesWithAdditionalLoad(linkLoads:Vector[DynamicRouteLoad]):TravelTimeCalculator = {
+    // TODO: we need have access to the TravelTimeCalculator or something similar for this
+
+    // create a priority queue, which goes through route with lowest DynamicRouteLoad (peel off which already considered) and puts its load in
+    // right bin
+
+
+    // start with a simple model, e.g. which takes density of current and outgoing links into account for calculation of the speed on the link.
+
+      // use some simple function to start with.
+
+
+    // the object we give out should be able to calculate
+
+
+    // first add loads dynamically (take travel time per link into account).
+
+    ???
+  }
 
   def assignTNC(inquiryId: RideHailingInquiry, vehicleId:Id[Vehicle]) = ??? // just do what implementation is doing at the moment
   // move code from reserveRide in here?
@@ -591,7 +609,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 case class VehicleState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInkWh: Double, energyConsumptionPerMeter: Double)
 
-case class LinkLoad(startTime:Double, linkIds:Vector[Id[Link]])
+case class DynamicRouteLoad(startTime:Double, linkIds:Vector[Id[Link]])
 
 
 
