@@ -32,8 +32,8 @@ jobs:
             git lfs pull
 
       - run:
-          name: Build and Test...
-          command: ./gradlew build --info --no-daemon --max-workers 1
+          name: Build ...
+          command: ./gradlew testClasses --no-daemon --max-workers 1
 
       - save_cache:
           paths:
@@ -42,6 +42,10 @@ jobs:
             - ~/beam/.git
           key: beam-cache-{{ checksum "build.gradle" }}
 
+      - run:
+          name: Test...
+          command: ./gradlew check --info --no-daemon --max-workers 1
+          
 test:
   timeout: 1800
 
