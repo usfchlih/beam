@@ -239,10 +239,10 @@ task spec(dependsOn: ['testClasses'], type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     
     minHeapSize = "128m"
-    maxHeapSize = "2048m"
+    maxHeapSize = "3072m"
 
     // set JVM arguments for the test JVM(s)
-    jvmArgs '-XX:MaxPermSize=256m'
+    jvmArgs '-XX:MaxPermSize=512m'
 }
 test.dependsOn spec
 
