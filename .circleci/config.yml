@@ -8,8 +8,8 @@ jobs:
 
     environment:
       # Customize the JVM maximum heap limit
-      _JAVA_OPTIONS: "-Xmx1024m"
-      GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx1024m" -Dorg.gradle.daemon=false'
+      _JAVA_OPTIONS: "-Xmx2048m -Xms2048"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false"
     
     steps:
       - checkout
