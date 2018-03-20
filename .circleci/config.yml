@@ -33,7 +33,7 @@ jobs:
 
       - run:
           name: Build and Test...
-          command: ./gradlew build --no-daemon --stacktrace
+          command: ./gradlew build --stacktrace --no-daemon --max-workers 2 
 
       - save_cache:
           paths:
