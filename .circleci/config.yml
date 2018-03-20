@@ -8,10 +8,8 @@ jobs:
 
     environment:
       # Customize the JVM maximum heap limit
-      # JVM_OPTS: -Xmx3200m
+      _JAVA_OPTIONS: "-Xmx1024m"
       GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx1024m" -Dorg.gradle.daemon=false'
-      
-    resource_class: large
     
     steps:
       - checkout
@@ -35,7 +33,7 @@ jobs:
 
       - run:
           name: Build and Test...
-          command: ./gradlew build --stacktrace --no-daemon --max-workers 1
+          command: ./gradlew build --info --no-daemon --max-workers 1
 
       - save_cache:
           paths:
