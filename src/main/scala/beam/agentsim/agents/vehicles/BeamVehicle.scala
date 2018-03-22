@@ -31,7 +31,7 @@ import scala.util.{Random, Try}
 class BeamVehicle(val powerTrain: Powertrain,
                   val matSimVehicle: Vehicle,
                   val  initialMatsimAttributes: Option[ObjectAttributes],
-                  val  beamVehicleType: BeamVehicleType,
+                  val  beamVehicleType: BeamVehicleType,var fuelLevel:Double, val fuelCapacityInJoules:Double
   )
   extends Resource[BeamVehicle] {
     val log: Logger = Logger.getLogger(classOf[BeamVehicle])
@@ -88,6 +88,15 @@ class BeamVehicle(val powerTrain: Powertrain,
     } else {
       Left(DriverAlreadyAssigned(id, driver.get))
     }
+  }
+
+
+  def useFuel(distanceInMeters: Double)={
+    fuelLevel-= powerTrain.estimateConsumptionInJoules(distanceInMeters)/fuelCapacityInJoules
+  }
+
+  def addFuel(fuelInJoules: Double)={
+    fuelLevel+= fuelInJoules/fuelCapacityInJoules
   }
 
   /**
@@ -161,6 +170,8 @@ abstract class VehicleOccupancyAdministrator(val vehicle: BeamVehicle) {
       true
     }
   }
+
+
 
   def addStandingPassenger(idToAdd: Id[Vehicle]): Boolean = {
     if (standingPassengers.size + 1 > standingOccupancyLimit) {
