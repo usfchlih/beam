@@ -41,9 +41,9 @@ object DrivesVehicle {
 
   case class AddFuel(fuelInJoules: Double)
 
-  case object GetVehicleStateOfCharge
+  case object GetVehicleFuelState
 
-  case class AgentStateOfCharge(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain)
+  case class AgentFuelState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain)
 
 }
 
@@ -72,6 +72,7 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
         case Some(veh) =>
           // If no manager is set, we ignore
           veh.useFuel(_currentLeg.get.travelPath.distanceInM)
+          // TODO: send state of charge to ride hail manager here
           veh.manager.foreach( _ ! NotifyResourceIdle(veh.id,beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)))
         case None =>
           throw new RuntimeException(s"Driver $id just ended a leg ${_currentLeg.get} but had no vehicle under control")
@@ -255,11 +256,11 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
         _currentVehicleUnderControl.foreach(_.addFuel(fuelInJoules))
         stay()
 
-    case Event(GetVehicleStateOfCharge,_) =>
+    case Event(GetVehicleFuelState,_) =>
 
       _currentVehicleUnderControl match {
         case Some(veh) =>
-          sender() ! AgentStateOfCharge(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
+          sender() ! AgentFuelState(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
         case None =>
           throw new RuntimeException(s"Some one asked about vehicle state of charge, but no vehicle under control")
       }
