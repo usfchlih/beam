@@ -51,6 +51,12 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
   protected var _awaitingBoardConfirmation: Set[Id[Vehicle]] = HashSet[Id[Vehicle]]()
   protected var _awaitingAlightConfirmation: Set[Id[Vehicle]] = HashSet[Id[Vehicle]]()
 
+
+  var stateOfCharge: Double = 1 // 1 corresponds to 100%
+  val batteryCapacityInkWh: Double = 60 // TODO: set from outside, e.g. for whole fleet one value from config or individual for different types of cars
+  val energyConsumptionInJoulesPerMeter: Double = 760 // TODO: see above
+
+
   def passengerScheduleEmpty(tick: Double, triggerId: Long): State
 
   chainedWhen(Moving) {
@@ -58,6 +64,9 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
       //we have just completed a leg
       //      logDebug(s"Received EndLeg($tick, ${completedLeg.endTime}) for
       // beamVehicleId=${_currentVehicleUnderControl.get.id}, started Boarding/Alighting   ")
+
+      stateOfCharge+= (_currentLeg.get.travelPath.distanceInM*energyConsumptionInJoulesPerMeter)/3.6/Math.pow(10,6)/batteryCapacityInkWh
+
       lastVisited = beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)
       _currentVehicleUnderControl match {
         case Some(veh) =>
