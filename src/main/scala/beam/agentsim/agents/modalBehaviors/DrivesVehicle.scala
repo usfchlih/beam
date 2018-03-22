@@ -9,6 +9,7 @@ import beam.agentsim.agents.PersonAgent._
 import beam.agentsim.agents.TriggerUtils._
 import beam.agentsim.agents.modalBehaviors.DrivesVehicle._
 import beam.agentsim.agents.vehicles.AccessErrorCodes.{DriverHasEmptyPassengerScheduleError, VehicleFullError, VehicleGoneError}
+import beam.agentsim.agents.vehicles.EnergyEconomyAttributes.Powertrain
 import beam.agentsim.agents.vehicles.VehicleProtocol._
 import beam.agentsim.agents.vehicles._
 import beam.agentsim.events.{PathTraversalEvent, SpaceTime}
@@ -37,6 +38,13 @@ object DrivesVehicle {
 
   case class NotifyLegStartTrigger(tick: Double, beamLeg: BeamLeg) extends Trigger
 
+
+  case class AddFuel(fuelInJoules: Double)
+
+  case object GetVehicleStateOfCharge
+
+  case class AgentStateOfCharge(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain)
+
 }
 
 trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
@@ -52,11 +60,6 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
   protected var _awaitingAlightConfirmation: Set[Id[Vehicle]] = HashSet[Id[Vehicle]]()
 
 
-  var stateOfCharge: Double = 1 // 1 corresponds to 100%
-  val batteryCapacityInkWh: Double = 60 // TODO: set from outside, e.g. for whole fleet one value from config or individual for different types of cars
-  val energyConsumptionInJoulesPerMeter: Double = 760 // TODO: see above
-
-
   def passengerScheduleEmpty(tick: Double, triggerId: Long): State
 
   chainedWhen(Moving) {
@@ -64,13 +67,11 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
       //we have just completed a leg
       //      logDebug(s"Received EndLeg($tick, ${completedLeg.endTime}) for
       // beamVehicleId=${_currentVehicleUnderControl.get.id}, started Boarding/Alighting   ")
-
-      stateOfCharge+= (_currentLeg.get.travelPath.distanceInM*energyConsumptionInJoulesPerMeter)/3.6/Math.pow(10,6)/batteryCapacityInkWh
-
       lastVisited = beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)
       _currentVehicleUnderControl match {
         case Some(veh) =>
           // If no manager is set, we ignore
+          veh.useFuel(_currentLeg.get.travelPath.distanceInM)
           veh.manager.foreach( _ ! NotifyResourceIdle(veh.id,beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)))
         case None =>
           throw new RuntimeException(s"Driver $id just ended a leg ${_currentLeg.get} but had no vehicle under control")
@@ -248,6 +249,24 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
           releaseAndScheduleEndLeg()
         }
       }
+      stay()
+
+    case Event(AddFuel(fuelInJoules),_) =>
+        _currentVehicleUnderControl.foreach(_.addFuel(fuelInJoules))
+        stay()
+
+    case Event(GetVehicleStateOfCharge,_) =>
+
+      _currentVehicleUnderControl match {
+        case Some(veh) =>
+          sender() ! AgentStateOfCharge(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
+        case None =>
+          throw new RuntimeException(s"Some one asked about vehicle state of charge, but no vehicle under control")
+      }
+
+
+
+
       stay()
 
   }
