@@ -260,7 +260,7 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
     case Event(GetBeamVehicle,_) =>
       _currentVehicleUnderControl match {
         case Some(veh) =>
-          sender() !  GetBeamVehicleResult(_currentVehicleUnderControl.get)
+          sender() !  GetBeamVehicleResult(_currentVehicleUnderControl.get.copy) // TODO: fix
         case None =>
           throw new RuntimeException(s"Some one asked about beam vehicle, but no vehicle under control")
       }
