@@ -66,40 +66,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
   override val resources: collection.mutable.Map[Id[BeamVehicle], BeamVehicle] = collection.mutable.Map[Id[BeamVehicle], BeamVehicle]()
 
-
-
-
-
-
-
-
-
-
-
-
-
   // TODO: currently 'DefaultCostPerMile' is not used anywhere in the code, therefore commented it out -> needs to be used!
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
-
-  val selfTimerTimoutDuration=10*60 // TODO: set from config
-  val radius: Double = 5000
-
-  private implicit val timeout = Timeout(50000, TimeUnit.SECONDS)
-
-  val rideHailIterationHistoryActorRef = context.actorSelection("akka://beam-actor-system/user/RideHailIterationHistoryActor")
-
-  var tncMultiIterationData: TNCMultiIterationData = _
-
-  rideHailIterationHistoryActorRef ! GetWaitingTimes()
-
-//  val future = rideHailIterationHistoryActorRef.ask(GetWaitingTimes())
-//  val updateHistoricWaitingTimes=Await.ready(future, timeout.duration).value.get match {
-//    case Success(history) => history.asInstanceOf[UpdateHistoricWaitingTimes]
-//    case Failure(exception) => throw exception
-//  }
-
- //val updateHistoricWaitingTimes:UpdateHistoricWaitingTimes=future.
 
 
   //TODO improve search to take into account time when available
@@ -120,27 +89,52 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   private val availableRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
   private val inServiceRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
 
-  private val vehicleStates = collection.concurrent.TrieMap[Id[Vehicle], VehicleState]()
-
 
   // TODO: discuss again, if inheritence might have been a better choice.
   var tncResourceAllocationManager:TNCResourceAllocationManager=new TNCDefaultResourceAllocationManager()  // TODO: initiaize this somewhere
   // TODO: depending on what we select in config, select default or stanford tnc resource allocator
-  //beam.agentsim.agents.rideHailing.resourceAllocationManager="STANFORD_ALLOCATION_MANAGER_V1"
 
 
 
-  // TODO: move ride hailing inquiries to the resource allocation manager!
 
+// TODO: add perhaps to RHM ==================================================================??????????????????????
 
 
   private val pendingModifyPassengerScheduleAcks = collection.concurrent.TrieMap[Id[RideHailingInquiry],
     ReservationResponse]()
-  private var lockedVehicles = Set[Id[Vehicle]]()
+
+
+  val selfTimerTimoutDuration=10*60 // TODO: set from config
+  val radius: Double = 5000
+
+  private implicit val timeout = Timeout(50000, TimeUnit.SECONDS)
+
+  val rideHailIterationHistoryActorRef = context.actorSelection("akka://beam-actor-system/user/RideHailIterationHistoryActor")
+
+  var tncMultiIterationData: TNCMultiIterationData = _
+
+  rideHailIterationHistoryActorRef ! GetWaitingTimes()
+
 
   private var movedVehilce=false
 
   private val repositioningVehicleLegs= collection.mutable.TreeMap[Id[Vehicle],(BeamLeg,Double,Long)]()
+
+  // TODO: move perhaps to default resoure Allocation manager ==================================================================??????????????????????
+
+
+  private var lockedVehicles = Set[Id[Vehicle]]()
+
+
+
+  // TODO: features to keep in RHM
+
+    // commands for
+
+
+
+
+
 
   def receive = uninitialized
 
@@ -183,10 +177,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       updateLocationOfAgent(vehId, whenWhere, false)
 
 
-    case vehicleState @ VehicleState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain) =>
 
-      // TODO: fix compile error
-      vehicleStates.put(vehicleId,vehicleState)
 
     case NotifyResourceInUse(vehId: Id[Vehicle], whenWhere) =>
 
