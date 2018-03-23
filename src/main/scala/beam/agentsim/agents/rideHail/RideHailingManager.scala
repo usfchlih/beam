@@ -15,7 +15,7 @@ import beam.agentsim.agents.PersonAgent.Waiting
 import beam.agentsim.agents.{PersonAgent, TriggerUtils}
 import beam.agentsim.agents.TriggerUtils._
 import beam.agentsim.agents.household.HouseholdActor.ReleaseVehicleReservation
-import beam.agentsim.agents.modalBehaviors.DrivesVehicle.{VehicleState, StartLegTrigger}
+import beam.agentsim.agents.modalBehaviors.DrivesVehicle.{GetBeamVehicleResult, StartLegTrigger, VehicleState}
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.agents.vehicles.AccessErrorCodes.{CouldNotFindRouteToCustomer, RideHailVehicleTakenError, UnknownInquiryIdError, UnknownRideHailReservationError}
 import beam.agentsim.agents.vehicles.EnergyEconomyAttributes.Powertrain
@@ -62,9 +62,21 @@ case class RideHailingManagerData() extends BeamAgentData
 // TODO: remove name variable, as not used currently in the code anywhere?
 class RideHailingManager(val name: String, val beamServices: BeamServices, val router: ActorRef, val boundingBox: Envelope, val surgePricingManager: RideHailSurgePricingManager) extends VehicleManager with HasServices {
 
-  import scala.collection.JavaConverters._
+  import scala.collection.JavaConverters._ // TODO: check if still needed
 
   override val resources: collection.mutable.Map[Id[BeamVehicle], BeamVehicle] = collection.mutable.Map[Id[BeamVehicle], BeamVehicle]()
+
+
+
+
+
+
+
+
+
+
+
+
 
   // TODO: currently 'DefaultCostPerMile' is not used anywhere in the code, therefore commented it out -> needs to be used!
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
@@ -245,6 +257,19 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       val timerMessage = ScheduleTrigger(timerTrigger, self)
       beamServices.schedulerRef ! timerMessage
       beamServices.schedulerRef ! TriggerUtils.completed(triggerId)
+    }
+
+
+    case UpdateResource(resourceId:Id[BeamVehicle], resource: BeamVehicle) => {
+      update(resourceId,resource)
+    }
+
+    case GetResource(resourceId:Id[BeamVehicle]) => {
+      sender() ! GetResourceResult(findResource(resourceId).get)
+    }
+
+    case GetBeamVehicleResult(beamVehicle:BeamVehicle) => {
+      update(beamVehicle.id, beamVehicle)
     }
 
 
