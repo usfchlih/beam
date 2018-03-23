@@ -77,6 +77,11 @@ object Resource {
 
   case class AssignManager(managerRef: ActorRef)
 
+  case class UpdateResource(resourceId:Id[_], resource: _)
+
+  case class GetResource(resourceId:Id[_])
+
+  case class GetResourceResult(resource:Resource[_])
 
 }
 
@@ -106,6 +111,10 @@ object ResourceManager {
   /**
     * Concrete implementation that manages Resources of type [[BeamVehicle]]
     */
-  trait VehicleManager extends Actor with ResourceManager[BeamVehicle]
+  trait VehicleManager extends Actor with ResourceManager[BeamVehicle]{
+
+
+
+  }
 
 }
