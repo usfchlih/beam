@@ -41,9 +41,9 @@ object DrivesVehicle {
 
   case class AddFuel(fuelInJoules: Double)
 
-  case object GetVehicleFuelState
+  case object GetVehicleState
 
-  case class AgentFuelState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain)
+  case class VehicleState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain)
 
 }
 
@@ -256,10 +256,10 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
         _currentVehicleUnderControl.foreach(_.addFuel(fuelInJoules))
         stay()
 
-    case Event(GetVehicleFuelState,_) =>
+    case Event(GetVehicleState,_) =>
       _currentVehicleUnderControl match {
         case Some(veh) =>
-          sender() ! AgentFuelState(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
+          sender() ! VehicleState(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
         case None =>
           throw new RuntimeException(s"Some one asked about vehicle state of charge, but no vehicle under control")
       }
