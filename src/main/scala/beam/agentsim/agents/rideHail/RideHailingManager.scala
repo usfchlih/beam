@@ -581,16 +581,13 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   }
 
 
-
-
-
-  // TODO: implement methods for use by resource allocation manager
-
   def getAllTNCVehicleStates():Vector[VehicleState] = {
-
+    vehicleStates.values.toVector
   }
 
-  def getIdlingTNCs():Vector[VehicleState] = ???
+  def getIdlingTNCVehicleStates():Vector[VehicleState] = {
+    vehicleStates.filterKeys(availableRideHailVehicles.contains(_)).values.toVector
+  }
 
 
   def getEstimatedLinkTravelTimesWithAdditionalLoad(linkLoads:Vector[DynamicRouteLoad]):TravelTimeCalculator = {
