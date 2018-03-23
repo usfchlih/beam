@@ -1,12 +1,19 @@
 package beam.agentsim.agents.rideHail
 
+import akka.actor.ActorRef
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.events.SpaceTime
+import beam.router.RoutingModel.BeamTime
 import org.matsim.api.core.v01.Id
 
 trait TNCResourceAllocationManager {
 
   // all methods can use RHM.getFleetInfo
+
+// TODO: set this always in Ride Hail Manager with each query
+  var sender:ActorRef
+
+  val radius: Double // TODO: set this in constructor!
 
   def getNonBindingTravelProposalAsEstimate(startLocation:SpaceTime, endLocation:SpaceTime):TravelProposal // we take over current implementation
     // TODO: also give back
@@ -17,7 +24,7 @@ trait TNCResourceAllocationManager {
     // use RHM.assignTNC
 
 
-  def allocatePassenger(inquiryId: Id[RideHailingInquiry])
+  def allocatePassenger(inquiryId: Id[RideHailingInquiry], surgePricingManager: RideHailSurgePricingManager, departAt: BeamTime)
 
 
 
