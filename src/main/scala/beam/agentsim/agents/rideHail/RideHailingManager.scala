@@ -161,9 +161,15 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       print()
 
     case NotifyResourceIdle(vehId: Id[Vehicle], whenWhere) =>
+      // TODO: send message to Drivers Vehicle here to get the state of the vehicle
+      // perform following update only after we have receive the following message back.
+
       updateLocationOfAgent(vehId, whenWhere, false)
 
+
     case NotifyResourceInUse(vehId: Id[Vehicle], whenWhere) =>
+
+      // TODO: in reality this message is never sent in code anywhere - think about how to handle this.
       updateLocationOfAgent(vehId, whenWhere, false)
 
     case CheckInResource(vehicleId: Id[Vehicle], availableIn: Option[SpaceTime]) =>
