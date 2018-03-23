@@ -69,8 +69,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // TODO: currently 'DefaultCostPerMile' is not used anywhere in the code, therefore commented it out -> needs to be used!
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
-  val radius: Double = 5000
+
   val selfTimerTimoutDuration=10*60 // TODO: set from config
+  val radius: Double = 5000
 
   private implicit val timeout = Timeout(50000, TimeUnit.SECONDS)
 
@@ -87,7 +88,6 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 //  }
 
  //val updateHistoricWaitingTimes:UpdateHistoricWaitingTimes=future.
-
 
 
   //TODO improve search to take into account time when available
@@ -121,10 +121,6 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // TODO: move ride hailing inquiries to the resource allocation manager!
 
 
-  /**
-    * Customer inquiries awaiting reservation confirmation.
-    */
-  lazy val pendingInquiries: Cache[Id[RideHailingInquiry], (TravelProposal, BeamTrip)] = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.SECONDS).build()
 
   private val pendingModifyPassengerScheduleAcks = collection.concurrent.TrieMap[Id[RideHailingInquiry],
     ReservationResponse]()
@@ -342,30 +338,23 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       if (tncResourceAllocationManager.bufferReservationRequests()){
 
       } else {
-        tncResourceAllocationManager.allocatePassenger(inquiryId)
-      }
-
-      if (pendingInquiries.asMap.containsKey(inquiryId)) {
-        val (travelPlanOpt: Option[(TravelProposal, BeamTrip)], customerAgent: ActorRef, closestRHA: Option[RideHailingAgentLocation]) = findClosestRideHailingAgents(inquiryId, customerPickUp)
-
-        closestRHA match {
-          case Some((closestRideHailingAgent)) =>
-            val travelProposal = travelPlanOpt.get._1
-            surgePricingManager.addRideCost(departAt.atTime, travelProposal.estimatedPrice.doubleValue(), customerPickUp)
 
 
-            val tripPlan = travelPlanOpt.map(_._2)
-            handleReservation(inquiryId, vehiclePersonIds, customerPickUp, destination, customerAgent,
-              closestRideHailingAgent, travelProposal, tripPlan)
-          // We have an agent nearby, but it's not the one we originally wanted
-          case _ =>
-            customerAgent ! ReservationResponse(Id.create(inquiryId.toString, classOf[ReservationRequest]), Left
-            (UnknownRideHailReservationError))
+        if (pendingInquiries.asMap.containsKey(inquiryId)) {
+          tncResourceAllocationManager.allocatePassenger(inquiryId,surgePricingManager, departAt)
+
+
+
+        } else {
+          sender() ! ReservationResponse(Id.create(inquiryId.toString, classOf[ReservationRequest]), Left
+          (UnknownInquiryIdError))
         }
-      } else {
-        sender() ! ReservationResponse(Id.create(inquiryId.toString, classOf[ReservationRequest]), Left
-        (UnknownInquiryIdError))
+
+
+
       }
+
+
     case ModifyPassengerScheduleAck(inquiryIDOption) =>
 
 
@@ -458,21 +447,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
 
-  private def findClosestRideHailingAgents(inquiryId: Id[RideHailingInquiry], customerPickUp: Location) = {
 
-    val travelPlanOpt = Option(pendingInquiries.asMap.remove(inquiryId))
-    val customerAgent = sender()
-    /**
-      * 1. customerAgent ! ReserveRideConfirmation(availableRideHailingAgentSpatialIndex, customerId, travelProposal)
-      * 2. availableRideHailingAgentSpatialIndex ! PickupCustomer
-      */
-    val nearbyRideHailingAgents = availableRideHailingAgentSpatialIndex.getDisk(customerPickUp.getX, customerPickUp.getY,
-      radius).asScala.toVector
-    val closestRHA: Option[RideHailingAgentLocation] = nearbyRideHailingAgents.filter(x =>
-      lockedVehicles(x.vehicleId)).find(_.vehicleId.equals(travelPlanOpt.get._1.responseRideHailing2Pickup
-      .itineraries.head.vehiclesInTrip.head))
-    (travelPlanOpt, customerAgent, closestRHA)
-  }
 
   private def createCustomerInquiryResponse(personId: Id[PersonAgent], customerPickUp: Location, departAt: BeamTime, destination: Location, rideHailingLocation: RideHailingAgentLocation): (Future[Any], Future[Any]) = {
     val customerAgentBody = StreetVehicle(Id.createVehicleId(s"body-$personId"), SpaceTime((customerPickUp,
@@ -537,29 +512,6 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       agentLocation.currentLocation.loc.getY, agentLocation)
   }
 
-  private def handleReservation(inquiryId: Id[RideHailingInquiry], vehiclePersonId: VehiclePersonId,
-                                customerPickUp: Location, destination: Location,
-                                customerAgent: ActorRef, closestRideHailingAgentLocation: RideHailingAgentLocation,
-                                travelProposal: TravelProposal, trip2DestPlan: Option[BeamTrip]): Unit = {
-
-    // Modify RH agent passenger schedule and create BeamAgentScheduler message that will dispatch RH agent to do the
-    // pickup
-    val passengerSchedule = PassengerSchedule()
-    passengerSchedule.addLegs(travelProposal.responseRideHailing2Pickup.itineraries.head.toBeamTrip.legs) // Adds
-    // empty trip to customer
-    passengerSchedule.addPassenger(vehiclePersonId, trip2DestPlan.get.legs.filter(_.mode == CAR)) // Adds customer's
-    // actual trip to destination
-    putIntoService(closestRideHailingAgentLocation)
-    lockedVehicles -= closestRideHailingAgentLocation.vehicleId
-
-    // Create confirmation info but stash until we receive ModifyPassengerScheduleAck
-    val triggerToSchedule = schedule[StartLegTrigger](passengerSchedule.schedule.firstKey.startTime,
-      closestRideHailingAgentLocation.rideHailAgent, passengerSchedule.schedule.firstKey)
-    pendingModifyPassengerScheduleAcks.put(inquiryId, ReservationResponse(Id.create(inquiryId.toString,
-      classOf[ReservationRequest]), Right(ReserveConfirmInfo(trip2DestPlan.head.legs.head, trip2DestPlan.last.legs
-      .last, vehiclePersonId, triggerToSchedule))))
-    closestRideHailingAgentLocation.rideHailAgent ! ModifyPassengerSchedule(passengerSchedule, Some(inquiryId))
-  }
 
 
 
@@ -621,7 +573,13 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
     ???
   }
 
-  def assignTNC(inquiryId: RideHailingInquiry, vehicleId:Id[Vehicle]) = ??? // just do what implementation is doing at the moment
+  def assignTNC(inquiryId: RideHailingInquiry, vehicleId:Id[Vehicle]) =
+
+
+
+
+
+    ??? // just do what implementation is doing at the moment
   // move code from reserveRide in here?
 
   def moveIdleTNCTo(vehicleId: Id[Vehicle], coord: Coord) = ???
