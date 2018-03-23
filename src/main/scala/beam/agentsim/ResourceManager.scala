@@ -95,6 +95,10 @@ trait ResourceManager[R <: Resource[R]] {
     resources.get(resourceId)
   }
 
+  def update(resourceId:Id[R], resource: R): Unit ={
+    resources.put(resourceId,resource)
+  }
+
 }
 
 object ResourceManager {
