@@ -15,9 +15,10 @@ import beam.agentsim.agents.PersonAgent.Waiting
 import beam.agentsim.agents.{PersonAgent, TriggerUtils}
 import beam.agentsim.agents.TriggerUtils._
 import beam.agentsim.agents.household.HouseholdActor.ReleaseVehicleReservation
-import beam.agentsim.agents.modalBehaviors.DrivesVehicle.StartLegTrigger
+import beam.agentsim.agents.modalBehaviors.DrivesVehicle.{VehicleState, StartLegTrigger}
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.agents.vehicles.AccessErrorCodes.{CouldNotFindRouteToCustomer, RideHailVehicleTakenError, UnknownInquiryIdError, UnknownRideHailReservationError}
+import beam.agentsim.agents.vehicles.EnergyEconomyAttributes.Powertrain
 import beam.agentsim.agents.vehicles.VehicleProtocol.StreetVehicle
 import beam.agentsim.agents.vehicles._
 import beam.agentsim.events.SpaceTime
@@ -107,6 +108,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   private val availableRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
   private val inServiceRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
 
+  private val vehicleStates = collection.concurrent.TrieMap[Id[Vehicle], VehicleState]()
+
+
   // TODO: discuss again, if inheritence might have been a better choice.
   var tncResourceAllocationManager:TNCResourceAllocationManager=new TNCDefaultResourceAllocationManager()  // TODO: initiaize this somewhere
   // TODO: depending on what we select in config, select default or stanford tnc resource allocator
@@ -166,6 +170,11 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
       updateLocationOfAgent(vehId, whenWhere, false)
 
+
+    case vehicleState @ VehicleState(vehicleId: Id[Vehicle], location: SpaceTime, stateOfCharge: Double, batteryCapacityInJoules: Double, powertrain: Powertrain) =>
+
+      // TODO: fix compile error
+      vehicleStates.put(vehicleId,vehicleState)
 
     case NotifyResourceInUse(vehId: Id[Vehicle], whenWhere) =>
 
@@ -369,6 +378,8 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
   }
+
+
 
 
   private def repositionVehicle(legs: Seq[BeamLeg], inquiryId: Id[RideHailingManager.RideHailingInquiry],rideHailAgent: ActorRef):Unit={
@@ -575,7 +586,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
   // TODO: implement methods for use by resource allocation manager
 
-  def getAllTNCs():Vector[VehicleState] = ???
+  def getAllTNCVehicleStates():Vector[VehicleState] = {
+
+  }
 
   def getIdlingTNCs():Vector[VehicleState] = ???
 
