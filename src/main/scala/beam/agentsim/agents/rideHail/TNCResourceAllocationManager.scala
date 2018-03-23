@@ -16,7 +16,14 @@ trait TNCResourceAllocationManager {
   def allocatePassengers(inquiryIds: Vector[Id[RideHailingInquiry]]) // input: information of batch of tnc requests (from
     // use RHM.assignTNC
 
+
+  def allocatePassenger(inquiryId: Id[RideHailingInquiry])
+
+
+
   def repositionIdleVehicles()
+
+  def bufferReservationRequests(): Boolean
 
     // use RHM.moveIdleTNCTo to implement
 
