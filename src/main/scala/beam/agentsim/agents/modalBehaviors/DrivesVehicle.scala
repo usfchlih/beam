@@ -70,9 +70,9 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
       lastVisited = beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)
       _currentVehicleUnderControl match {
         case Some(veh) =>
-          // If no manager is set, we ignore
           veh.useFuel(_currentLeg.get.travelPath.distanceInM)
-          // TODO: send state of charge to ride hail manager here
+
+          // If no manager is set, we ignore
           veh.manager.foreach( _ ! NotifyResourceIdle(veh.id,beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)))
         case None =>
           throw new RuntimeException(s"Driver $id just ended a leg ${_currentLeg.get} but had no vehicle under control")
@@ -257,17 +257,12 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
         stay()
 
     case Event(GetVehicleFuelState,_) =>
-
       _currentVehicleUnderControl match {
         case Some(veh) =>
           sender() ! AgentFuelState(veh.id, lastVisited, veh.fuelLevel, veh.fuelCapacityInJoules, veh.powerTrain)
         case None =>
           throw new RuntimeException(s"Some one asked about vehicle state of charge, but no vehicle under control")
       }
-
-
-
-
       stay()
 
   }
