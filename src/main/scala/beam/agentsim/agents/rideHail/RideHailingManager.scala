@@ -127,9 +127,17 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
 
-  // TODO: features to keep in RHM
+  // TODO: main features to keep in RHM
 
-    // commands for
+    // commands for getting routes by RAM
+  // repositioning api (call from RAM)
+  // assign tnc to person api (call from RAM)
+
+  // waiting
+
+  // maintain history of positions of vehicles
+
+  // gest estimated updated load for RAM query
 
 
 
