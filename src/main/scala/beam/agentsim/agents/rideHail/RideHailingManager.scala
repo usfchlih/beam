@@ -117,6 +117,10 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   //beam.agentsim.agents.rideHailing.resourceAllocationManager="STANFORD_ALLOCATION_MANAGER_V1"
 
 
+
+  // TODO: move ride hailing inquiries to the resource allocation manager!
+
+
   /**
     * Customer inquiries awaiting reservation confirmation.
     */
@@ -334,6 +338,13 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       }
 
     case ReserveRide(inquiryId, vehiclePersonIds, customerPickUp, departAt, destination) =>
+
+      if (tncResourceAllocationManager.bufferReservationRequests()){
+
+      } else {
+        tncResourceAllocationManager.allocatePassenger(inquiryId)
+      }
+
       if (pendingInquiries.asMap.containsKey(inquiryId)) {
         val (travelPlanOpt: Option[(TravelProposal, BeamTrip)], customerAgent: ActorRef, closestRHA: Option[RideHailingAgentLocation]) = findClosestRideHailingAgents(inquiryId, customerPickUp)
 
