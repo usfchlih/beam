@@ -299,8 +299,8 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
 
-   case  ResourceAllocationManagerRoutingResponsesCallBack(routeResponses: Vector[RoutingResponse]) =>
-     tncResourceAllocationManager.routeRequestsResultCallBack(routeResponses)
+   case  ResourceAllocationManagerRoutingResponsesCallBack(batchRequestId: Long,routeResponses: Vector[RoutingResponse]) =>
+     tncResourceAllocationManager.routeRequestsResultCallBack(batchRequestId,routeResponses)
 
 
 
@@ -445,9 +445,31 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
     }
 
-    self ! ResourceAllocationManagerRoutingResponsesCallBack()
+    val responses: Vector[RoutingResponse];
+
+    self ! ResourceAllocationManagerRoutingResponsesCallBack(batchRequestId, responses)
 
   }
+
+
+
+
+  def rideHailingInquiryResponse(inquiryId: Id[RideHailingInquiry], proposals: Seq[TravelProposal],
+                                 error: Option[ReservationError] = None) = {
+
+
+
+
+
+
+
+  }
+
+
+
+
+
+
 
 
 
@@ -715,7 +737,7 @@ object RideHailingManager {
                                 rnd1Response: RoutingResponse, tick:Double,triggerId: Long)
 
 
-  case class ResourceAllocationManagerRoutingResponsesCallBack(response: Vector[RoutingResponse])
+  case class ResourceAllocationManagerRoutingResponsesCallBack(batchRequestId: Long,response: Vector[RoutingResponse])
 
 
 

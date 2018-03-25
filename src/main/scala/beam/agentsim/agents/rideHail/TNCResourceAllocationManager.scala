@@ -1,9 +1,10 @@
 package beam.agentsim.agents.rideHail
 
 import akka.actor.ActorRef
+import beam.agentsim.agents.PersonAgent
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.events.SpaceTime
-import beam.router.BeamRouter.RoutingResponse
+import beam.router.BeamRouter.{Location, RoutingResponse}
 import beam.router.RoutingModel.BeamTime
 import org.matsim.api.core.v01.Id
 
@@ -33,9 +34,10 @@ trait TNCResourceAllocationManager {
 
   def bufferReservationRequests(): Boolean
 
-  def routeRequestsResultCallBack (batchRequestId: Long)
+  def routeRequestsResultCallBack (batchRequestId: Long, responses: Vector[RoutingResponse])
 
-
+  def rideHailInquiry(inquiryId: Id[RideHailingInquiry], customerId: Id[PersonAgent],
+                      pickUpLocation: Location, departAt: BeamTime, destination: Location)
 
     // use RHM.moveIdleTNCTo to implement
 

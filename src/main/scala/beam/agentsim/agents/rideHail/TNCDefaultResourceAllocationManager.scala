@@ -8,7 +8,7 @@ import beam.agentsim.agents.rideHail.RideHailingManager.{RideHailingAgentLocatio
 import beam.agentsim.agents.vehicles.AccessErrorCodes.UnknownRideHailReservationError
 import beam.agentsim.agents.vehicles._
 import beam.agentsim.events.SpaceTime
-import beam.router.BeamRouter.Location
+import beam.router.BeamRouter.{Location, RoutingResponse}
 import beam.router.RoutingModel.{BeamTime, BeamTrip}
 import com.google.common.cache.{Cache, CacheBuilder}
 import org.matsim.api.core.v01.Id
@@ -23,6 +23,10 @@ class TNCDefaultResourceAllocationManager extends TNCResourceAllocationManager {
     */
   lazy val pendingInquiries: Cache[Id[RideHailingInquiry], (TravelProposal, BeamTrip)] = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.SECONDS).build()
 
+  override def routeRequestsResultCallBack(batchRequestId: Long, responses: Vector[RoutingResponse]) = {
+
+    routeRequestsResultCallBack (null, null)
+  }
 
   override def repositionIdleVehicles(): Unit = {}
 
