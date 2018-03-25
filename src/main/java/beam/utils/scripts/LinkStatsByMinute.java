@@ -1,6 +1,5 @@
 package beam.utils.scripts;
 
-import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
@@ -15,7 +14,7 @@ public class LinkStatsByMinute {
     private Network network;
 
     private BeamCalcLinkStatsMinute linkStats;
-    private VolumesAnalyzer volumes;
+    private VolumesAnalyzerMinute volumes;
 
 
     public LinkStatsByMinute(Network network) {
@@ -38,7 +37,7 @@ public class LinkStatsByMinute {
     public void notifyIterationStarts(EventsManager eventsManager) {
 
         this.linkStats.reset();
-        volumes = new VolumesAnalyzer(60, 24 * 60 * 60 - 1, network);
+        volumes = new VolumesAnalyzerMinute(60, 24 * 60 * 60 - 1, network);
         eventsManager.addHandler(volumes);
 
 

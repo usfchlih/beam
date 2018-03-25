@@ -22,7 +22,6 @@ package beam.utils.scripts;
 
 import org.apache.log4j.Logger;
 import org.matsim.analysis.CalcLinkStats;
-import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
@@ -88,7 +87,7 @@ public class BeamCalcLinkStatsMinute {
         this.volScaleFactor = vol_scale_factor;
     }
 
-    public void addData(final VolumesAnalyzer analyzer, final TravelTime ttimes) {
+    public void addData(final VolumesAnalyzerMinute analyzer, final TravelTime ttimes) {
         this.count++;
         // TODO verify ttimes has hourly timeBin-Settings
 
@@ -99,7 +98,7 @@ public class BeamCalcLinkStatsMinute {
             Link link = this.network.getLinks().get(linkId);
 
             // get the volumes for the link ID from the analyzier
-            double[] volumes = analyzer.getVolumesPerHourForLink(linkId);
+            double[] volumes = analyzer.getVolumesPerMinuteForLink(linkId);
 
             // get the destination container for the data from link data (could have gotten this through iterator right away)
             LinkData data = this.linkData.get(linkId);
