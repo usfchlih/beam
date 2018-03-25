@@ -191,15 +191,15 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
     case GetBeamVehicleResult(beamVehicle:BeamVehicle, lastVisited: SpaceTime) => {
       update(beamVehicle.id, beamVehicle)
-      updateLocationOfAgent(beamVehicle.id, lastVisited, false)
+      updateLocationOfAgent(beamVehicle.id, lastVisited, true)
     }
 
 
-
-
     case NotifyResourceInUse(vehId: Id[Vehicle], whenWhere) =>
+      // TODO: in reality this message is never sent in code anywhere (dead code) - think about how to handle this.
+      // should this be called externally from somewhere?
 
-      // TODO: in reality this message is never sent in code anywhere - think about how to handle this.
+      // TODO: if this code is never called, then how does the isAvailable=false case ever execute in updateLocationOfAgent (dead code?).
       updateLocationOfAgent(vehId, whenWhere, false)
 
     case CheckInResource(vehicleId: Id[Vehicle], availableIn: Option[SpaceTime]) =>
@@ -212,6 +212,19 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         makeAvailable(rideHailingAgentLocation)
         sender ! CheckInSuccess
       })
+
+
+    case UpdateResource(resourceId:Id[BeamVehicle], resource: BeamVehicle) => {
+      update(resourceId,resource)
+    }
+
+    case GetResource(resourceId:Id[BeamVehicle]) => {
+      sender() ! GetResourceResult(findResource(resourceId).get)
+    }
+
+
+
+// Reposition code start ==========================
 
     case RepositionResponse(rnd1, rideHailingAgent2CustomerResponse,tick,triggerId) =>
 
@@ -272,14 +285,10 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       beamServices.schedulerRef ! TriggerUtils.completed(triggerId)
     }
 
+    // Reposition code start ==========================
 
-    case UpdateResource(resourceId:Id[BeamVehicle], resource: BeamVehicle) => {
-      update(resourceId,resource)
-    }
 
-    case GetResource(resourceId:Id[BeamVehicle]) => {
-      sender() ! GetResourceResult(findResource(resourceId).get)
-    }
+
 
 
 
