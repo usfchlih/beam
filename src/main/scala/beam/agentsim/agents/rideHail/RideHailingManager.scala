@@ -176,7 +176,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       resources.put(agentsim.vehicleId2BeamVehicleId(vehId), beamServices.vehicles(vehId))
 
     case UpdateHistoricWaitingTimes(_) =>
-      print()
+      // TODO: save the historic waiting times
+
+      // TODO: default allocator should use these historic waiting times to reposition vehicles
 
     case NotifyResourceIdle(vehId: Id[Vehicle], whenWhere) =>
       // TODO: send message to Drivers Vehicle here to get the state of the vehicle
