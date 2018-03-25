@@ -3,6 +3,7 @@ package beam.agentsim.agents.rideHail
 import akka.actor.ActorRef
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.events.SpaceTime
+import beam.router.BeamRouter.RoutingResponse
 import beam.router.RoutingModel.BeamTime
 import org.matsim.api.core.v01.Id
 
@@ -31,6 +32,10 @@ trait TNCResourceAllocationManager {
   def repositionIdleVehicles()
 
   def bufferReservationRequests(): Boolean
+
+  def routeRequestsResultCallBack (routes:Vector[RoutingResponse])
+
+
 
     // use RHM.moveIdleTNCTo to implement
 

@@ -224,7 +224,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
 
-// Reposition code start ==========================
+// Reposition code start (ONLY experimental at the moment) ==========================
 
     case RepositionResponse(rnd1, rideHailingAgent2CustomerResponse,tick,triggerId) =>
 
@@ -285,7 +285,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       beamServices.schedulerRef ! TriggerUtils.completed(triggerId)
     }
 
-    // Reposition code start ==========================
+    // Reposition code end ==========================
 
 
 
@@ -296,6 +296,13 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
     case CheckOutResource(_) =>
       // Because the RideHail Manager is in charge of deciding which specific vehicles to assign to customers, this should never be used
       throw new RuntimeException("Illegal use of CheckOutResource, RideHailingManager is responsible for checking out vehicles in fleet.")
+
+
+
+   case  ResourceAllocationManagerRoutingResponsesCallBack(routeResponses: Vector[RoutingResponse]) =>
+     tncResourceAllocationManager.routeRequestsResultCallBack(routeResponses)
+
+
 
 
     case RideHailingInquiry(inquiryId, personId, customerPickUp, departAt, destination) =>
@@ -418,12 +425,29 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
     case ReleaseVehicleReservation(_, vehId) =>
       lockedVehicles -= vehId
 
+
+
+
+
     case msg =>
       log.warn(s"unknown message received by RideHailingManager $msg")
 
 
   }
 
+
+  def routeRequestsWithCallBackForResourceAllocationManager(): Unit ={
+    var vectorOfVFutureResponse:Vector[Future[Any]]= ???
+
+    for {
+      futureResponse <- vectorOfVFutureResponse
+    } {
+
+    }
+
+    self ! ResourceAllocationManagerRoutingResponsesCallBack()
+
+  }
 
 
 
@@ -689,6 +713,10 @@ object RideHailingManager {
 
   case class RepositionResponse(rnd1: RideHailingAgentLocation,
                                 rnd1Response: RoutingResponse, tick:Double,triggerId: Long)
+
+
+  case class ResourceAllocationManagerRoutingResponsesCallBack(response: Vector[RoutingResponse])
+
 
 
   def props(name: String, services: BeamServices, router: ActorRef, boundingBox: Envelope, surgePricingManager: RideHailSurgePricingManager) = {
