@@ -1,6 +1,5 @@
 package beam.utils.scripts;
 
-import beam.utils.BeamCalcLinkStats;
 import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -15,13 +14,13 @@ public class LinkStatsByMinute {
 
     private Network network;
 
-    private BeamCalcLinkStats linkStats;
+    private BeamCalcLinkStatsMinute linkStats;
     private VolumesAnalyzer volumes;
 
 
     public LinkStatsByMinute(Network network) {
         this.network = network;
-        linkStats = new BeamCalcLinkStats(network);
+        linkStats = new BeamCalcLinkStatsMinute(network);
     }
 
 
