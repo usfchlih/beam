@@ -15,7 +15,7 @@ import beam.agentsim.agents.PersonAgent.Waiting
 import beam.agentsim.agents.{PersonAgent, TriggerUtils}
 import beam.agentsim.agents.TriggerUtils._
 import beam.agentsim.agents.household.HouseholdActor.ReleaseVehicleReservation
-import beam.agentsim.agents.modalBehaviors.DrivesVehicle.{GetBeamVehicleResult, StartLegTrigger, VehicleState}
+import beam.agentsim.agents.modalBehaviors.DrivesVehicle.{GetBeamVehicle, GetBeamVehicleResult, StartLegTrigger, VehicleState}
 import beam.agentsim.agents.rideHail.RideHailingManager._
 import beam.agentsim.agents.vehicles.AccessErrorCodes.{CouldNotFindRouteToCustomer, RideHailVehicleTakenError, UnknownInquiryIdError, UnknownRideHailReservationError}
 import beam.agentsim.agents.vehicles.EnergyEconomyAttributes.Powertrain
@@ -184,7 +184,15 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       // TODO: send message to Drivers Vehicle here to get the state of the vehicle
       // perform following update only after we have receive the following message back.
 
-      updateLocationOfAgent(vehId, whenWhere, false)
+      resources.get(agentsim.vehicleId2BeamVehicleId(vehId)).get.driver.foreach(driver => {
+        driver ! GetBeamVehicle
+      })
+
+
+    case GetBeamVehicleResult(beamVehicle:BeamVehicle, lastVisited: SpaceTime) => {
+      update(beamVehicle.id, beamVehicle)
+      updateLocationOfAgent(beamVehicle.id, lastVisited, false)
+    }
 
 
 
@@ -195,6 +203,10 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       updateLocationOfAgent(vehId, whenWhere, false)
 
     case CheckInResource(vehicleId: Id[Vehicle], availableIn: Option[SpaceTime]) =>
+
+      // TODO: would this also work without the else case, because this might cause potentially race conditions
+
+
       resources.get(agentsim.vehicleId2BeamVehicleId(vehicleId)).orElse(beamServices.vehicles.get(vehicleId)).get.driver.foreach(driver => {
         val rideHailingAgentLocation = RideHailingAgentLocation(driver, vehicleId, availableIn.get)
         makeAvailable(rideHailingAgentLocation)
@@ -269,9 +281,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       sender() ! GetResourceResult(findResource(resourceId).get)
     }
 
-    case GetBeamVehicleResult(beamVehicle:BeamVehicle) => {
-      update(beamVehicle.id, beamVehicle)
-    }
+
 
 
     case CheckOutResource(_) =>
