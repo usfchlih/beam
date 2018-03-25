@@ -436,7 +436,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   }
 
 
-  def routeRequestsWithCallBackForResourceAllocationManager(): Unit ={
+  def routeRequestsWithCallBackForResourceAllocationManager(batchRequestId: Long): Unit ={
     var vectorOfVFutureResponse:Vector[Future[Any]]= ???
 
     for {

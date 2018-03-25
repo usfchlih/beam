@@ -33,7 +33,7 @@ trait TNCResourceAllocationManager {
 
   def bufferReservationRequests(): Boolean
 
-  def routeRequestsResultCallBack (routes:Vector[RoutingResponse])
+  def routeRequestsResultCallBack (batchRequestId: Long)
 
 
 
