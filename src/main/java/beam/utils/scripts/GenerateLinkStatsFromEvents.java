@@ -12,13 +12,13 @@ import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator;
 
-import java.io.File;
-
 public class GenerateLinkStatsFromEvents {
 
-    private static String BASE_PATH = new File("").getAbsolutePath();
-    private static final String EVENTS_FILE_PATH = BASE_PATH+"/test/input/equil-square/test-data/physSimEvents-relative-speeds.xml";
-    private static final String NETWORK_FILE_PATH = BASE_PATH+"/test/input/equil-square/test-data/physSimNetwork-relative-speeds.xml";
+    //private static String BASE_PATH = new File("").getAbsolutePath();
+    private static final String EVENTS_FILE_PATH = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\ITERS\\it.0\\0.physSimEvents.xml";
+    private static final String NETWORK_FILE_PATH = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\physSimNetwork.xml";
+    private static final String outputFileName = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\linkstats-test.txt.gz";
+
 
     LinkStatsByMinute linkStatsByMinute;
 
@@ -39,7 +39,7 @@ public class GenerateLinkStatsFromEvents {
          *  The following code reads the events and throws them to all the handlers registered with the
          *  events manager.
          */
-        linkStatsByMinute = new LinkStatsByMinute(network);
+        linkStatsByMinute = new LinkStatsByMinute(network, outputFileName);
         linkStatsByMinute.notifyIterationStarts(eventsManager);
         MatsimEventsReader matsimEventsReader = new MatsimEventsReader(eventsManager);
         matsimEventsReader.readFile(EVENTS_FILE_PATH);
