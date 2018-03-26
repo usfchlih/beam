@@ -17,7 +17,7 @@ public class GenerateLinkStatsFromEvents {
     //private static String BASE_PATH = new File("").getAbsolutePath();
     private static final String EVENTS_FILE_PATH = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\ITERS\\it.0\\0.physSimEvents.xml";
     private static final String NETWORK_FILE_PATH = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\physSimNetwork.xml";
-    private static final String outputFileName = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\linkstats-test.txt.gz";
+    private static final String outputFileName = "C:\\ns\\beam-project\\beam8-issue-245\\test\\input\\beamville\\output\\beamville_2018-03-26_03-35-03\\linkstats-test-" + System.currentTimeMillis() + ".txt.gz";
 
 
     LinkStatsByMinute linkStatsByMinute;

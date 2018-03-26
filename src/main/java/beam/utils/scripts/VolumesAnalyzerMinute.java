@@ -30,7 +30,7 @@ public class VolumesAnalyzerMinute extends VolumesAnalyzer {
 
         int slotsPerHour = (int)(3600.0 / this.timeBinSize);
         for (int hour = 0; hour < (24 * 60); hour++) {
-            double time = hour * 3600.0;
+            double time = hour * 60.0;
             for (int i = 0; i < slotsPerHour; i++) {
                 volumes[hour] += volumesForLink[this.getTimeSlotIndex(time)];
                 time += this.timeBinSize;
