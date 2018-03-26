@@ -18,10 +18,6 @@ class TNCDefaultResourceAllocationManager extends TNCResourceAllocationManager {
 
 
 
-  /**
-    * Customer inquiries awaiting reservation confirmation.
-    */
-  lazy val pendingInquiries: Cache[Id[RideHailingInquiry], (TravelProposal, BeamTrip)] = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.SECONDS).build()
 
   override def routeRequestsResultCallBack(batchRequestId: Long, responses: Vector[RoutingResponse]) = {
 

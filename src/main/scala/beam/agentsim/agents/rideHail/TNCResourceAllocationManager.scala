@@ -41,6 +41,9 @@ trait TNCResourceAllocationManager {
 
     // use RHM.moveIdleTNCTo to implement
 
+
+  def getTimeAndCost( pickUpLocation: Location, departAt: BeamTime, destination: Location)
+
 }
 
 object TNCResourceAllocationManager{

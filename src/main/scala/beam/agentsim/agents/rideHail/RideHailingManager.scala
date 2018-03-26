@@ -62,6 +62,12 @@ case class RideHailingManagerData() extends BeamAgentData
 // TODO: remove name variable, as not used currently in the code anywhere?
 class RideHailingManager(val name: String, val beamServices: BeamServices, val router: ActorRef, val boundingBox: Envelope, val surgePricingManager: RideHailSurgePricingManager) extends VehicleManager with HasServices {
 
+  /**
+    * Customer inquiries awaiting reservation confirmation.
+    */
+  lazy val pendingInquiries: Cache[Id[RideHailingInquiry], (TravelProposal, BeamTrip)] = CacheBuilder.newBuilder().expireAfterWrite(10, TimeUnit.SECONDS).build()
+
+
   import scala.collection.JavaConverters._ // TODO: check if still needed
 
   override val resources: collection.mutable.Map[Id[BeamVehicle], BeamVehicle] = collection.mutable.Map[Id[BeamVehicle], BeamVehicle]()
@@ -370,6 +376,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         val rideHailingAgent2CustomerResponseMod = RoutingResponse(modRHA2Cust)
         val rideHailing2DestinationResponseMod = RoutingResponse(modRHA2Dest)
 
+        // TODO: remove cost - also in customerTripPlan; also remove timeToCustomer
         val travelProposal = TravelProposal(rideHailingLocation, timeToCustomer, cost, Option(FiniteDuration
         (customerTripPlan.totalTravelTime, TimeUnit.SECONDS)), rideHailingAgent2CustomerResponseMod,
           rideHailing2DestinationResponseMod)
@@ -725,7 +732,8 @@ object RideHailingManager {
 
   case class RegisterRideUnavailable(ref: ActorRef, location: Coord)
 
-  case class RideHailingAgentLocation(rideHailAgent: ActorRef, vehicleId: Id[Vehicle], currentLocation: SpaceTime)
+  // TODO: when someone reserves ride - remember nextLocation
+  case class RideHailingAgentLocation(rideHailAgent: ActorRef, vehicleId: Id[Vehicle], currentLocation: SpaceTime, nextLocation: Option[SpaceTime])
 
   case object RideUnavailableAck
 
