@@ -24,11 +24,13 @@ public class LinkStatsByMinute {
 
     public void notifyIterationEnds(int iteration, TravelTimeCalculator travelTimeCalculator) {
 
+        System.out.println("Inside notifyIterationEnds");
+
         linkStats.addData(volumes, travelTimeCalculator.getLinkTravelTimes());
 
 
-            System.out.println("FileName -> " + outputFileName);
-            linkStats.writeFile(outputFileName);
+        System.out.println("FileName -> " + outputFileName);
+        linkStats.writeFile(outputFileName);
 
     }
 
