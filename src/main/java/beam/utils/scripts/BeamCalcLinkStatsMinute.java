@@ -173,7 +173,8 @@ public class BeamCalcLinkStatsMinute {
             // write data
             for (Map.Entry<Id<Link>, LinkData> entry : this.linkData.entrySet()) {
 
-                for (int i = 0; i <= this.nofBins; i++) {
+                // In case we use <= in the below loop we get the sums in the last 3 rows for a specific link
+                for (int i = 0; i < this.nofBins; i++) {
                     for (int j= MIN; j<= SUM; j++){
                         Id<Link> linkId = entry.getKey();
                         LinkData data = entry.getValue();
