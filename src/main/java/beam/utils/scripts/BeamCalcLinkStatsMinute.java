@@ -105,7 +105,6 @@ public class BeamCalcLinkStatsMinute {
         // go through all links
         for (Id<Link> linkId : this.linkData.keySet()) {
 
-            System.out.println("LinkId " + linkId.toString());
             // retrieve link from link ID
             Link link = this.network.getLinks().get(linkId);
 
@@ -114,8 +113,6 @@ public class BeamCalcLinkStatsMinute {
 
             // get the destination container for the data from link data (could have gotten this through iterator right away)
             LinkDataMap data = this.linkData.get(linkId);
-
-            System.out.println("LinkId " + linkId.toString());
 
             // go through all hours:
             for (int hour = 0; hour < this.nofBins; hour++) {
@@ -163,7 +160,6 @@ public class BeamCalcLinkStatsMinute {
         this.count = 0;
         log.info( " resetting `count' to zero.  This info is here since we want to check when this" +
                 " is happening during normal simulation runs.  kai, jan'11") ;
-        System.out.println("Going to reset");
         // initialize our data-table
         for (Link link : this.network.getLinks().values()) {
             //LinkData data = new LinkData(new double[NOF_STATS][this.nofBins + 1], new double[NOF_STATS][this.nofBins]);
