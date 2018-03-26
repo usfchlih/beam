@@ -20,22 +20,20 @@
 package beam.utils;
 
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.log4j.Logger;
+import org.matsim.analysis.CalcLinkStats;
+import org.matsim.analysis.VolumesAnalyzer;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.core.utils.misc.StringUtils;
 
 import javax.inject.Inject;
-import org.matsim.analysis.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class BeamCalcLinkStats {
 
@@ -170,7 +168,8 @@ public class BeamCalcLinkStats {
             // write data
             for (Map.Entry<Id<Link>, LinkData> entry : this.linkData.entrySet()) {
 
-                for (int i = 0; i <= this.nofHours; i++) {
+                // In case we use <= in the below loop we get the sums in the last 3 rows for a specific link
+                for (int i = 0; i < this.nofHours; i++) {
                     for (int j= MIN; j<= SUM; j++){
                         Id<Link> linkId = entry.getKey();
                         LinkData data = entry.getValue();
