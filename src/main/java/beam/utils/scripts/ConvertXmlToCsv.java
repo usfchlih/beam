@@ -1,5 +1,6 @@
 package beam.utils.scripts;
 
+import beam.analysis.via.CSVWriter;
 import org.apache.commons.lang.StringUtils;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.network.Link;
@@ -8,42 +9,39 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+
 public class ConvertXmlToCsv {
+    private static final String DELIMITER = "\t";
     public static void main(String[] args) {
-//        try {
         Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
         Network network = scenario.getNetwork();
         MatsimNetworkReader matsimNetworkReader = new MatsimNetworkReader(network);
         matsimNetworkReader.readFile("test/input/beamville/physsim-network.xml");
-        for (Link ss : network.getLinks().values()) {
-            System.out.print(ss.getId().toString());
-            System.out.print("\t" + ss.getFromNode().getId().toString());
-            System.out.print("\t" + ss.getToNode().getId().toString());
-            System.out.print("\t" + ss.getLength());
-            System.out.print("\t" + ss.getFreespeed());
-            System.out.print("\t" + ss.getCapacity());
-            System.out.print("\t" + ss.getNumberOfLanes());
+        CSVWriter csvWriter = new CSVWriter("test/input/beamville/output/physsim-network.csv");
+        try (BufferedWriter bufferedWriter = csvWriter.getBufferedWriter()) {
+            for (Link ss : network.getLinks().values()) {
+                bufferedWriter.append(ss.getId().toString());
+                bufferedWriter.append(DELIMITER + ss.getFromNode().getId().toString());
+                bufferedWriter.append(DELIMITER + ss.getToNode().getId().toString());
+                bufferedWriter.append(DELIMITER + ss.getLength());
+                bufferedWriter.append(DELIMITER + ss.getFreespeed());
+                bufferedWriter.append(DELIMITER + ss.getCapacity());
+                bufferedWriter.append(DELIMITER + ss.getNumberOfLanes());
 //            System.out.println("ONEWAY"+ss);
-            String allowedModes = ss.getAllowedModes() == null ? "" : StringUtils.join(ss.getAllowedModes(), ",");
-            System.out.print("\t" + allowedModes);
-            String origid = (ss.getAttributes().getAttribute("origid") == null) ? "\t" : "\t" + ss.getAttributes().getAttribute("origid");
-            String type = (ss.getAttributes().getAttribute("type") == null) ? "\t" : "\t" + ss.getAttributes().getAttribute("type");
-            System.out.print(origid + type);
-            System.out.println();
-        }
-            /*File xmlFile = new File("test/input/beamville/physsim-network.xml");
-            SAXParserFactory factory = SAXParserFactory.newInstance();
-            SAXParser saxParser = factory.newSAXParser();
-            CsvHandler userhandler = new CsvHandler();
-            saxParser.parse(xmlFile, userhandler);
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
+                String allowedModes = ss.getAllowedModes() == null ? "" : StringUtils.join(ss.getAllowedModes(), ",");
+                bufferedWriter.append(DELIMITER + allowedModes);
+                String origid = (ss.getAttributes().getAttribute("origid") == null) ? DELIMITER : DELIMITER + ss.getAttributes().getAttribute("origid");
+                String type = (ss.getAttributes().getAttribute("type") == null) ? DELIMITER : DELIMITER + ss.getAttributes().getAttribute("type");
+                bufferedWriter.append(origid + type);
+                bufferedWriter.append("\n");
+            }
+            bufferedWriter.flush();
+            csvWriter.closeFile();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        }*/
+        }
     }
-
 
 }
