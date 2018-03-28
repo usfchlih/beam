@@ -22,20 +22,23 @@ public class ConvertXmlToCsv {
         CSVWriter csvWriter = new CSVWriter("test/input/beamville/output/physsim-network.csv");
         try (BufferedWriter bufferedWriter = csvWriter.getBufferedWriter()) {
             for (Link ss : network.getLinks().values()) {
-                bufferedWriter.append(ss.getId().toString());
-                bufferedWriter.append(DELIMITER + ss.getFromNode().getId().toString());
-                bufferedWriter.append(DELIMITER + ss.getToNode().getId().toString());
-                bufferedWriter.append(DELIMITER + ss.getLength());
-                bufferedWriter.append(DELIMITER + ss.getFreespeed());
-                bufferedWriter.append(DELIMITER + ss.getCapacity());
-                bufferedWriter.append(DELIMITER + ss.getNumberOfLanes());
+
+                if (ss.getFromNode().getId() != null) bufferedWriter.append(ss.getId().toString());
+                bufferedWriter.append(DELIMITER);
+                if (ss.getFromNode().getId() != null) bufferedWriter.append(ss.getFromNode().getId().toString());
+                bufferedWriter.append(DELIMITER);
+                if (ss.getToNode().getId() != null) bufferedWriter.append(ss.getToNode().getId().toString());
+                bufferedWriter.append(DELIMITER).append(String.valueOf(ss.getLength()));
+                bufferedWriter.append(DELIMITER).append(String.valueOf(ss.getFreespeed()));
+                bufferedWriter.append(DELIMITER).append(String.valueOf(ss.getCapacity()));
+                bufferedWriter.append(DELIMITER).append(String.valueOf(ss.getNumberOfLanes()));
 //            System.out.println("ONEWAY"+ss);
                 String allowedModes = ss.getAllowedModes() == null ? "" : StringUtils.join(ss.getAllowedModes(), ",");
-                bufferedWriter.append(DELIMITER + allowedModes);
+                bufferedWriter.append(DELIMITER).append(allowedModes);
                 String origid = (ss.getAttributes().getAttribute("origid") == null) ? DELIMITER : DELIMITER + ss.getAttributes().getAttribute("origid");
                 String type = (ss.getAttributes().getAttribute("type") == null) ? DELIMITER : DELIMITER + ss.getAttributes().getAttribute("type");
-                bufferedWriter.append(origid + type);
-                bufferedWriter.append("\n");
+                bufferedWriter.append(origid).append(type);
+                bufferedWriter.newLine();
             }
             bufferedWriter.flush();
             csvWriter.closeFile();
