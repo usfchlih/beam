@@ -21,9 +21,14 @@ public class ConvertXmlToCsv {
         matsimNetworkReader.readFile("test/input/beamville/physsim-network.xml");
         CSVWriter csvWriter = new CSVWriter("test/input/beamville/output/physsim-network.csv");
         try (BufferedWriter bufferedWriter = csvWriter.getBufferedWriter()) {
+            bufferedWriter.append("id").append(DELIMITER).append("from").append(DELIMITER).append("to").append(DELIMITER)
+                    .append("length").append(DELIMITER).append("freespeed").append(DELIMITER).append("capacity")
+                    .append(DELIMITER).append("permlanes")
+//                    .append(DELIMITER).append("oneway")
+                    .append(DELIMITER).append("modes").append(DELIMITER).append("origid").append(DELIMITER).append("type");
+            bufferedWriter.newLine();
             for (Link ss : network.getLinks().values()) {
-
-                if (ss.getFromNode().getId() != null) bufferedWriter.append(ss.getId().toString());
+                if (ss.getId() != null) bufferedWriter.append(ss.getId().toString());
                 bufferedWriter.append(DELIMITER);
                 if (ss.getFromNode().getId() != null) bufferedWriter.append(ss.getFromNode().getId().toString());
                 bufferedWriter.append(DELIMITER);
