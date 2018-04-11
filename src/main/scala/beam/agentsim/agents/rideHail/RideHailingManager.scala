@@ -56,9 +56,8 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
   val radius: Double = 5000
-  val selfTimerTimoutDuration=20*60 // TODO: set from config
+  val selfTimerTimoutDuration=10 // TODO: set from config
 
-  val rideHailAllocationManagerTimeoutInSeconds = 60
 
 
   //TODO improve search to take into account time when available
