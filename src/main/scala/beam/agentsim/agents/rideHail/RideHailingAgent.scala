@@ -79,7 +79,7 @@ class RideHailingAgent(override val id: Id[RideHailingAgent], val scheduler: Act
   override def passengerScheduleEmpty(tick: Double, triggerId: Long) = {
     vehicle.checkInResource(Some(lastVisited),context.dispatcher)
     scheduler ! completed(triggerId)
-    stay
+    goto(Waiting)
   }
 
   chainedWhen (AnyState) {

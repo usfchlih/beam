@@ -54,7 +54,43 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
   def passengerScheduleEmpty(tick: Double, triggerId: Long): State
 
   chainedWhen(Moving) {
+
+    case Event(ModifyPassengerSchedule(updatedPassengerSchedule, requestId), _) =>
+      var errorFlag = false
+      if (!passengerSchedule.isEmpty) {
+        val endSpaceTime = passengerSchedule.terminalSpacetime()
+        if (updatedPassengerSchedule.initialSpacetime.time < endSpaceTime.time ||
+          beamServices.geo.distInMeters(updatedPassengerSchedule.initialSpacetime.loc, endSpaceTime.loc) >
+            beamServices.beamConfig.beam.agentsim.thresholdForWalkingInMeters
+        ) {
+          errorFlag = true
+        }
+      }
+      if (errorFlag) {
+        stop(Failure("Invalid attempt to ModifyPassengerSchedule, Spacetime of existing schedule incompatible with " +
+          "new"))
+      } else {
+        passengerSchedule.addLegs(updatedPassengerSchedule.schedule.keys.toSeq)
+        updatedPassengerSchedule.schedule.foreach { legAndManifest =>
+          legAndManifest._2.riders.foreach { rider =>
+            passengerSchedule.addPassenger(rider, Seq(legAndManifest._1))
+          }
+        }
+        val resultingState = _currentLeg match {
+          case None =>
+            goto(Waiting) replying ModifyPassengerScheduleAck(requestId)
+          case Some(_) =>
+            stay() replying ModifyPassengerScheduleAck(requestId)
+        }
+        resultingState
+      }
+
+
     case Event(TriggerWithId(EndLegTrigger(tick), triggerId), _) =>
+
+
+
+
       //we have just completed a leg
       _currentLeg match {
         case Some(leg) =>

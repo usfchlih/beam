@@ -56,7 +56,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
   val radius: Double = 5000
-  val selfTimerTimoutDuration=10 // TODO: set from config
+  val selfTimerTimoutDuration=600 // TODO: set from config
 
 
 
@@ -133,14 +133,17 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       }     )
 
     case RepositionResponse(rnd1, rnd2, rnd1Response, rnd2Response) =>
+
       if (rnd1Response.itineraries.size>0){
         val passengerSchedule = PassengerSchedule()
         passengerSchedule.addLegs(rnd1Response.itineraries.head.toBeamTrip.legs) // Adds
         putIntoService(rnd1)
         rideHailStartLeg = schedule[StartLegTrigger](passengerSchedule.schedule.firstKey.startTime,
           rnd1.rideHailAgent, passengerSchedule.schedule.firstKey).head
+
         rnd1.rideHailAgent ! ModifyPassengerSchedule(passengerSchedule, None)
-      } else {
+
+        } else {
         beamServices.schedulerRef ! TriggerUtils.completed(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
       }
 
@@ -175,6 +178,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       if (tick<1000){
         beamServices.schedulerRef ! TriggerUtils.completed(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
       } else {
+
         currentTime=tick
 
         // get two random idling TNCs
@@ -191,14 +195,21 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
             .filterNot(_.equals(idRnd1))
             .apply(rnd.nextInt(availableKeyset.size - 1))
 
+
+
+          var rnd1=availableRideHailVehicles.get(idRnd1).getOrElse(inServiceRideHailVehicles.get(idRnd1).get)
+
           for{
-            rnd1 <- availableRideHailVehicles.get(idRnd1)
+
+           // rnd1 <- availableRideHailVehicles.get(idRnd1).getOrElse(inServiceRideHailVehicles.get(idRnd1).get)
             rnd2 <- availableRideHailVehicles.get(idRnd2)
           } yield {
+
             val departureTime: BeamTime = DiscreteTime(currentTime.toInt)
 
             val rideHailingVehicleAtOrigin = StreetVehicle(rnd1.vehicleId, SpaceTime(
               (rnd1.currentLocation.loc, tick.toInt)), CAR, asDriver = false)
+
 
 
             val futureRnd1AgentResponse = router ? RoutingRequest(
@@ -310,6 +321,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
       }
     case ModifyPassengerScheduleAck(inquiryIDOption) =>
       sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(rideHailStartLeg)
+
       //completeReservation(Id.create(inquiryIDOption.get.toString, classOf[RideHailingInquiry]))
 
     case ReleaseVehicleReservation(_, vehId) =>
