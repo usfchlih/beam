@@ -56,7 +56,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
   val radius: Double = 5000
-  val selfTimerTimoutDuration=10*60 // TODO: set from config
+  val selfTimerTimoutDuration=20*60 // TODO: set from config
 
   val rideHailAllocationManagerTimeoutInSeconds = 60
 
@@ -79,6 +79,8 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   private val availableRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
   private val inServiceRideHailVehicles = collection.concurrent.TrieMap[Id[Vehicle], RideHailingAgentLocation]()
 
+
+  var idRnd1:Id[Vehicle]=null
 
   //var nextCompleteNoticeRideHailAllocationTimeout:CompletionNotice=_
 
@@ -183,7 +185,9 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
         import context.dispatcher
         if(availableKeyset.size > 1) {
-          val idRnd1 = availableKeyset.apply(rnd.nextInt(availableKeyset.size))
+          if (idRnd1 == null) {
+            idRnd1 = availableKeyset.apply(rnd.nextInt(availableKeyset.size))
+          }
           val idRnd2 = availableKeyset
             .filterNot(_.equals(idRnd1))
             .apply(rnd.nextInt(availableKeyset.size - 1))
@@ -322,7 +326,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
 
   private def prepareAckMessageToSchedulerForRideHailAllocationManagerTimeout(tick: Double , triggerId:Long): Unit ={
-    val timerTrigger = RepositioningTimer(tick + rideHailAllocationManagerTimeoutInSeconds)
+    val timerTrigger = RepositioningTimer(tick + selfTimerTimoutDuration)
     nextScheduleTriggerRepositioningTimer = ScheduleTrigger(timerTrigger, self)
    // nextCompleteNoticeRideHailAllocationTimeout = TriggerUtils.completed(triggerId,Vector(timerMessage))
     nextScheduleTriggerRepositioningTimer_triggerId=triggerId

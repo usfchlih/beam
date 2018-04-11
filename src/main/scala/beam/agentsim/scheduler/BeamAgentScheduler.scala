@@ -42,7 +42,6 @@ object BeamAgentScheduler {
     def completed(triggerId: Long, scheduleTriggers: Vector[ScheduleTrigger]): CompletionNotice = {
       CompletionNotice(triggerId, scheduleTriggers)
     }
-
   }
 
   /**

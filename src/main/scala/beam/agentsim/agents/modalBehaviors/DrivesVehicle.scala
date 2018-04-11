@@ -44,7 +44,7 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
   protected val transportNetwork: TransportNetwork
 
   protected var passengerSchedule: PassengerSchedule = PassengerSchedule()
-  var lastVisited:  SpaceTime = SpaceTime.zero
+  var lastVisited: SpaceTime = SpaceTime.zero
   protected var _currentLeg: Option[BeamLeg] = None
   //TODO: send some message to set _currentVehicle
   protected var _currentVehicleUnderControl: Option[BeamVehicle] = None
@@ -56,41 +56,49 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
   chainedWhen(Moving) {
     case Event(TriggerWithId(EndLegTrigger(tick), triggerId), _) =>
       //we have just completed a leg
-      //      logDebug(s"Received EndLeg($tick, ${completedLeg.endTime}) for
-      // beamVehicleId=${_currentVehicleUnderControl.get.id}, started Boarding/Alighting   ")
-      lastVisited = beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)
-      _currentVehicleUnderControl match {
-        case Some(veh) =>
-          // If no manager is set, we ignore
-          veh.manager.foreach( _ ! NotifyResourceIdle(veh.id,beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)))
-        case None =>
-          throw new RuntimeException(s"Driver $id just ended a leg ${_currentLeg.get} but had no vehicle under control")
-      }
-      passengerSchedule.schedule.get(_currentLeg.get) match {
-        case Some(manifest) =>
-          holdTickAndTriggerId(tick, triggerId)
-          manifest.riders.foreach { pv =>
-            beamServices.personRefs.get(pv.personId).foreach { personRef =>
-              logDebug(s"Scheduling NotifyLegEndTrigger for Person $personRef")
-              scheduler ! scheduleOne[NotifyLegEndTrigger](tick, personRef, _currentLeg.get)
+      _currentLeg match {
+        case Some(leg) =>
+          if (leg.endTime == tick.toLong) {
+            lastVisited = beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)
+            _currentVehicleUnderControl match {
+              case Some(veh) =>
+                // If no manager is set, we ignore
+                veh.manager.foreach(_ ! NotifyResourceIdle(veh.id, beamServices.geo.wgs2Utm(_currentLeg.get.travelPath.endPoint)))
+              case None =>
+                throw new RuntimeException(s"Driver $id just ended a leg ${_currentLeg.get} but had no vehicle under control")
             }
-          }
-          if (manifest.alighters.isEmpty) {
-            processNextLegOrCompleteMission()
+            passengerSchedule.schedule.get(_currentLeg.get) match {
+              case Some(manifest) =>
+                holdTickAndTriggerId(tick, triggerId)
+                manifest.riders.foreach { pv =>
+                  beamServices.personRefs.get(pv.personId).foreach { personRef =>
+                    logDebug(s"Scheduling NotifyLegEndTrigger for Person $personRef")
+                    scheduler ! scheduleOne[NotifyLegEndTrigger](tick, personRef, _currentLeg.get)
+                  }
+                }
+                if (manifest.alighters.isEmpty) {
+                  processNextLegOrCompleteMission()
+                } else {
+                  logDebug(s" will wait for ${manifest.alighters.size} alighters: ${manifest.alighters}")
+                  _awaitingAlightConfirmation ++= manifest.alighters
+                  stay()
+                }
+              case None =>
+                throw new RuntimeException(s"Driver $id did not find a manifest for BeamLeg ${_currentLeg}")
+            }
           } else {
-            logDebug(s" will wait for ${manifest.alighters.size} alighters: ${manifest.alighters}")
-            _awaitingAlightConfirmation ++= manifest.alighters
+            // this means, we have overwritten the the passenger schedule and should ignore the end leg message
             stay()
           }
-        case None =>
-          throw new RuntimeException(s"Driver $id did not find a manifest for BeamLeg ${_currentLeg}")
+        case None => throw new RuntimeException(s"Driver $id has no BeamLeg")
       }
+
 
     case Event(AlightVehicle(tick, vehiclePersonId), _) =>
 
       // Remove person from vehicle and clear carrier
-      _currentVehicleUnderControl.foreach(veh=>
-        if(!veh.removePassenger(vehiclePersonId.vehicleId)){
+      _currentVehicleUnderControl.foreach(veh =>
+        if (!veh.removePassenger(vehiclePersonId.vehicleId)) {
           log.error(s"Attempted to remove passenger ${vehiclePersonId.vehicleId} but was not on board ${id}")
         })
       _awaitingAlightConfirmation -= vehiclePersonId.vehicleId
@@ -123,12 +131,14 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
             stay()
           }
         case None =>
-          stop(Failure(s"Driver $id did not find a manifest for BeamLeg $newLeg"))
+          //stop(Failure(s"Driver $id did not find a manifest for BeamLeg $newLeg"))
+          log.info(s"Driver $id did not find a manifest for BeamLeg $newLeg - probably passenger schedule changed")
+          stay()
       }
     case Event(BoardVehicle(tick, vehiclePersonId), _) =>
       _awaitingBoardConfirmation -= vehiclePersonId.vehicleId
-      _currentVehicleUnderControl.foreach{veh=>
-        if(!veh.addPassenger(vehiclePersonId.vehicleId)){
+      _currentVehicleUnderControl.foreach { veh =>
+        if (!veh.addPassenger(vehiclePersonId.vehicleId)) {
           log.error(s"Attempted to add passenger ${vehiclePersonId.vehicleId} but vehicle was full ${id}")
         }
       }
@@ -199,27 +209,27 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
         resultingState
       }
     case Event(ReservationRequestWithVehicle(req, vehicleIdToReserve), _) =>
-      val response = if(passengerSchedule.isEmpty){
+      val response = if (passengerSchedule.isEmpty) {
         log.warning(s"$id received ReservationRequestWithVehicle from ${vehicleIdToReserve} but passengerSchedule is empty")
         ReservationResponse(req.requestId, Left(DriverHasEmptyPassengerScheduleError))
-      }else{
+      } else {
         handleVehicleReservation(req, vehicleIdToReserve)
       }
       beamServices.personRefs(req.passengerVehiclePersonId.personId) ! response
       stay()
 
 
-    case Event(RemovePassengerFromTrip(id),_)=>
-      if(passengerSchedule.removePassenger(id)){
-//        log.error(s"Passenger $id removed from trip")
+    case Event(RemovePassengerFromTrip(id), _) =>
+      if (passengerSchedule.removePassenger(id)) {
+        //        log.error(s"Passenger $id removed from trip")
       }
 
-      if(_awaitingAlightConfirmation.nonEmpty){
+      if (_awaitingAlightConfirmation.nonEmpty) {
         _awaitingAlightConfirmation -= id.vehicleId
         if (_awaitingAlightConfirmation.isEmpty) {
           processNextLegOrCompleteMission()
         }
-      }else if(_awaitingBoardConfirmation.nonEmpty) {
+      } else if (_awaitingBoardConfirmation.nonEmpty) {
         _awaitingBoardConfirmation -= id.vehicleId
         if (_awaitingBoardConfirmation.isEmpty) {
           releaseAndScheduleEndLeg()
@@ -228,11 +238,12 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
       stay()
 
   }
+
   def setPassengerSchedule(newPassengerSchedule: PassengerSchedule) = {
     passengerSchedule = newPassengerSchedule
   }
 
-  def modifyPassengerSchedule(updatedPassengerSchedule: PassengerSchedule)={
+  def modifyPassengerSchedule(updatedPassengerSchedule: PassengerSchedule) = {
     var errorFlag = false
     if (!passengerSchedule.isEmpty) {
       val endSpaceTime = passengerSchedule.terminalSpacetime()
@@ -271,7 +282,7 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
     _currentVehicleUnderControl = Some(beamServices.vehicles(vehicleId))
   }
 
-  def unbecomeDriverOfVehicle(vehicleId: Id[Vehicle], tick: Double): Unit ={
+  def unbecomeDriverOfVehicle(vehicleId: Id[Vehicle], tick: Double): Unit = {
     beamServices.vehicles(vehicleId).unsetDriver()
     eventsManager.processEvent(new PersonLeavesVehicleEvent(tick, Id.createPersonId(id), vehicleId))
   }
@@ -282,7 +293,7 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
     // Produce link events for this trip (the same ones as in PathTraversalEvent).
     // TODO: They don't contain correct timestamps yet, but they all happen at the end of the trip!!
     // So far, we only throw them for ExperiencedPlans, which don't need timestamps.
-    RoutingModel.traverseStreetLeg(_currentLeg.get, _currentVehicleUnderControl.get.id, (_,_) => 0L)
+    RoutingModel.traverseStreetLeg(_currentLeg.get, _currentVehicleUnderControl.get.id, (_, _) => 0L)
       .foreach(eventsManager.processEvent)
     eventsManager.processEvent(new VehicleLeavesTrafficEvent(_currentLeg.get.endTime, id.asInstanceOf[Id[Person]], null, _currentVehicleUnderControl.get.id, "car", 0.0))
     scheduler ! completed(theTriggerId, schedule[EndLegTrigger](_currentLeg.get.endTime, self))
@@ -313,16 +324,16 @@ trait DrivesVehicle[T <: BeamAgentData] extends BeamAgent[T] with HasServices {
       case Some(currentLeg) if req.departFrom.startTime <= currentLeg.startTime =>
         ReservationResponse(req.requestId, Left(VehicleGoneError))
       case _ =>
-        if(req.departFrom.startTime < passengerSchedule.schedule.head._1.startTime){
+        if (req.departFrom.startTime < passengerSchedule.schedule.head._1.startTime) {
           ReservationResponse(req.requestId, Left(VehicleGoneError))
-        }else{
+        } else {
           val tripReservations = passengerSchedule.schedule.from(req.departFrom).to(req.arriveAt).toVector
           val vehicleCap = _currentVehicleUnderControl.get.getType.getCapacity
           val fullCap = vehicleCap.getSeats + vehicleCap.getStandingRoom
           val hasRoom = tripReservations.forall { entry =>
             entry._2.riders.size < fullCap
           }
-          if(hasRoom){
+          if (hasRoom) {
             val legs = tripReservations.map(_._1)
             passengerSchedule.addPassenger(req.passengerVehiclePersonId, legs)
             ReservationResponse(req.requestId, Right(ReserveConfirmInfo(req.departFrom, req.arriveAt, req.passengerVehiclePersonId)))
