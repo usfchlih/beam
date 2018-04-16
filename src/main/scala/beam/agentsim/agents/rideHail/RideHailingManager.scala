@@ -3,15 +3,13 @@ package beam.agentsim.agents.rideHail
 import java.util.concurrent.TimeUnit
 
 import beam.agentsim.agents.BeamAgent.Finish
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, Props,ActorLogging}
 import akka.pattern._
 import akka.util.Timeout
 import beam.agentsim
 import beam.agentsim.Resource._
 import beam.agentsim.ResourceManager.VehicleManager
-import beam.agentsim.agents.BeamAgent.BeamAgentData
-import beam.agentsim.agents.{PersonAgent, TriggerUtils}
-import beam.agentsim.agents.TriggerUtils._
+import beam.agentsim.agents.{PersonAgent }
 import beam.agentsim.agents.household.HouseholdActor.ReleaseVehicleReservation
 import beam.agentsim.agents.modalBehaviors.DrivesVehicle.StartLegTrigger
 import beam.agentsim.agents.rideHail.RideHailingManager._
@@ -121,14 +119,11 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     case RepositionResponse(rnd1, rnd2, rnd1Response, rnd2Response) =>
 
       if (rnd1Response.itineraries.size>0){
-        val passengerSchedule = PassengerSchedule()
-        passengerSchedule.addLegs(rnd1Response.itineraries.head.toBeamTrip.legs) // Adds
+        var passengerSchedule = PassengerSchedule()
+        passengerSchedule = passengerSchedule.addLegs(rnd1Response.itineraries.head.toBeamTrip.legs) // Adds
         putIntoService(rnd1)
-        rideHailStartLeg = schedule[StartLegTrigger](passengerSchedule.schedule.firstKey.startTime,
-          rnd1.rideHailAgent, passengerSchedule.schedule.firstKey).head
-
+        rideHailStartLeg = ScheduleTrigger(StartLegTrigger(passengerSchedule.schedule.firstKey.startTime, passengerSchedule.schedule.firstKey), rnd1.rideHailAgent)
         rnd1.rideHailAgent ! ModifyPassengerSchedule(passengerSchedule, None)
-
         } else {
         scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
       }
@@ -162,7 +157,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
       prepareAckMessageToSchedulerForRideHailAllocationManagerTimeout(tick, triggerId)
 
       if (tick<1000){
-        beamServices.schedulerRef ! TriggerUtils.completed(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
+        scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
       } else {
 
         currentTime=tick
@@ -306,7 +301,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
         (UnknownInquiryIdError))
       }
     case ModifyPassengerScheduleAck(inquiryIDOption) =>
-      completeReservation(Id.create(inquiryIDOption.get.toString, classOf[RideHailingInquiry]))
+      sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(rideHailStartLeg)
 
     case ReleaseVehicleReservation(_, vehId) =>
       lockedVehicles -= vehId
