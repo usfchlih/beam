@@ -43,7 +43,7 @@ class RideHailSurgePricingManager(beamConfig: BeamConfig, mTazTreeMap: Option[TA
   val rideHaillingConfig = beamConfig.beam.agentsim.agents.rideHailing
   val timeBinSize = rideHaillingConfig.surgePricing.timeBinSize // TODO: does throw exception for 60min, if +1 missing below
   val numberOfCategories = rideHaillingConfig.surgePricing.numberOfCategories // TODO: does throw exception for 0 and negative values
-  val numberOfTimeBins = Math.ceil(Time.parseTime(beamConfig.matsim.modules.qsim.endTime) / timeBinSize).toInt
+  val numberOfTimeBins = Math.floor(Time.parseTime(beamConfig.matsim.modules.qsim.endTime) / timeBinSize).toInt+1
   val surgeLevelAdaptionStep = rideHaillingConfig.surgePricing.surgeLevelAdaptionStep
   val minimumSurgeLevel = rideHaillingConfig.surgePricing.minimumSurgeLevel
   var isFirstIteration = true
@@ -145,8 +145,13 @@ class RideHailSurgePricingManager(beamConfig: BeamConfig, mTazTreeMap: Option[TA
     val taz = tazTreeMap.getTAZ(location.getX, location.getY)
     val timeBinIndex = getTimeBinIndex(time)
     surgePriceBins.get(taz.tazId.toString)
-      .map(i => i(timeBinIndex).currentIterationSurgePriceLevel)
-      .getOrElse(throw new Exception("no surge level found"))
+      .map{i =>
+        if(timeBinIndex < i.size){
+          i(timeBinIndex).currentIterationSurgePriceLevel
+        }else{
+          1.0
+        }
+      }.getOrElse(throw new Exception("no surge level found"))
   }
 
   def addRideCost(time: Double, cost: Double, pickupLocation: Location): Unit = {
@@ -155,10 +160,12 @@ class RideHailSurgePricingManager(beamConfig: BeamConfig, mTazTreeMap: Option[TA
     val timeBinIndex = getTimeBinIndex(time)
 
     surgePriceBins.get(taz.tazId.toString).foreach { i =>
-      val surgePriceBin = i.apply(timeBinIndex)
-      val updatedCurrentIterRevenue = surgePriceBin.currentIterationRevenue + cost
-      val updatedBin = surgePriceBin.copy(currentIterationRevenue = updatedCurrentIterRevenue)
-      i.update(timeBinIndex, updatedBin)
+      if(timeBinIndex < i.size) {
+        val surgePriceBin = i.apply(timeBinIndex)
+        val updatedCurrentIterRevenue = surgePriceBin.currentIterationRevenue + cost
+        val updatedBin = surgePriceBin.copy(currentIterationRevenue = updatedCurrentIterRevenue)
+        i.update(timeBinIndex, updatedBin)
+      }
     }
 
   }

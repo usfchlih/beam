@@ -41,12 +41,10 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Random
 
 
-//TODO: Build RHM from XML to be able to specify different kinds of TNC/Rideshare types and attributes
-case class RideHailingManagerData() extends BeamAgentData
 
 
-// TODO: remove name variable, as not used currently in the code anywhere?
-class RideHailingManager(val name: String, val beamServices: BeamServices, val router: ActorRef, val boundingBox: Envelope, val surgePricingManager: RideHailSurgePricingManager) extends VehicleManager with HasServices {
+
+class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRef,val router: ActorRef, val boundingBox: Envelope, val surgePricingManager: RideHailSurgePricingManager) extends VehicleManager with ActorLogging with HasServices {
 
   import scala.collection.JavaConverters._
 
@@ -56,9 +54,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
   val radius: Double = 5000
-  val selfTimerTimoutDuration=600 // TODO: set from config
-
-
+  val selfTimerTimoutDuration=10*60 // TODO: set from config
 
   //TODO improve search to take into account time when available
   private val availableRideHailingAgentSpatialIndex = {
@@ -99,16 +95,6 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
 
   override def receive: Receive = {
     case NotifyIterationEnds() =>
-      try {
-        /*val graphSurgePricing: GraphSurgePricing = new GraphSurgePricing(surgePricingManager, beamServices)
-        graphSurgePricing.createGraphs()*/
-
-        val graphRideHailingRevenue: GraphRideHailingRevenue = new GraphRideHailingRevenue()
-        graphRideHailingRevenue.createGraph(surgePricingManager)
-      } catch {
-        // print out exceptions, otherwise hidden, leads to difficult debugging
-        case e: Exception => logger.error("Error in NotifyIterationEnds.", e)
-      }
 
       surgePricingManager.updateRevenueStats()
       surgePricingManager.updateSurgePriceLevels()
@@ -144,7 +130,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         rnd1.rideHailAgent ! ModifyPassengerSchedule(passengerSchedule, None)
 
         } else {
-        beamServices.schedulerRef ! TriggerUtils.completed(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
+        scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
       }
 
 
@@ -287,11 +273,11 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         (customerTripPlan.totalTravelTime, TimeUnit.SECONDS)), rideHailingAgent2CustomerResponseMod,
           rideHailing2DestinationResponseMod)
         pendingInquiries.put(inquiryId, (travelProposal, modRHA2Dest.head.toBeamTrip()))
-        logger.debug(s"Found ride to hail for  person=$personId and inquiryId=$inquiryId within " +
+        log.debug(s"Found ride to hail for  person=$personId and inquiryId=$inquiryId within " +
           s"$shortDistanceToRideHailingAgent meters, timeToCustomer=$timeToCustomer seconds and cost=$$$cost")
         customerAgent ! RideHailingInquiryResponse(inquiryId, Vector(travelProposal))
       } else {
-        logger.debug(s"Router could not find route to customer person=$personId for inquiryId=$inquiryId")
+        log.debug(s"Router could not find route to customer person=$personId for inquiryId=$inquiryId")
         lockedVehicles -= rideHailingLocation.vehicleId
 
         customerAgent ! RideHailingInquiryResponse(inquiryId, Vector(), error = Option(CouldNotFindRouteToCustomer))
@@ -320,18 +306,16 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
         (UnknownInquiryIdError))
       }
     case ModifyPassengerScheduleAck(inquiryIDOption) =>
-      sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(rideHailStartLeg)
-
-      //completeReservation(Id.create(inquiryIDOption.get.toString, classOf[RideHailingInquiry]))
+      completeReservation(Id.create(inquiryIDOption.get.toString, classOf[RideHailingInquiry]))
 
     case ReleaseVehicleReservation(_, vehId) =>
       lockedVehicles -= vehId
 
     case Finish =>
-      logger.info("finish message received from BeamAgentScheduler")
+      log.info("finish message received from BeamAgentScheduler")
 
     case msg =>
-      logger.warn(s"unknown message received by RideHailingManager $msg from ${sender().path.toString()}")
+      log.warning(s"unknown message received by RideHailingManager $msg from ${sender().path.toString()}")
 
   }
 
@@ -344,7 +328,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   }
 
   private def sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(nextTrigger: ScheduleTrigger): Unit ={
-    beamServices.schedulerRef ! TriggerUtils.completed(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer,nextTrigger))
+    scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer,nextTrigger))
   }
 
   private def findClosestRideHailingAgents(inquiryId: Id[RideHailingInquiry], customerPickUp: Location) = {
@@ -442,8 +426,7 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
     lockedVehicles -= closestRideHailingAgentLocation.vehicleId
 
     // Create confirmation info but stash until we receive ModifyPassengerScheduleAck
-    val triggerToSchedule = schedule[StartLegTrigger](passengerSchedule.schedule.firstKey.startTime,
-      closestRideHailingAgentLocation.rideHailAgent, passengerSchedule.schedule.firstKey)
+    val triggerToSchedule = Vector(ScheduleTrigger(StartLegTrigger(passengerSchedule.schedule.firstKey.startTime, passengerSchedule.schedule.firstKey), closestRideHailingAgentLocation.rideHailAgent))
     pendingModifyPassengerScheduleAcks.put(inquiryId, ReservationResponse(Id.create(inquiryId.toString,
       classOf[ReservationRequest]), Right(ReserveConfirmInfo(trip2DestPlan.head.legs.head, trip2DestPlan.last.legs
       .last, vehiclePersonId, triggerToSchedule))))
@@ -453,11 +436,11 @@ class RideHailingManager(val name: String, val beamServices: BeamServices, val r
   private def completeReservation(inquiryId: Id[RideHailingInquiry]): Unit = {
     pendingModifyPassengerScheduleAcks.remove(inquiryId) match {
       case Some(response) =>
-        logger.debug(s"Completed reservation for $inquiryId")
+        log.debug(s"Completed reservation for $inquiryId")
         val customerRef = beamServices.personRefs(response.response.right.get.passengerVehiclePersonId.personId)
         customerRef ! response
       case None =>
-        logger.error(s"Vehicle was reserved by another agent for inquiry id $inquiryId")
+        log.error(s"Vehicle was reserved by another agent for inquiry id $inquiryId")
         sender() ! ReservationResponse(Id.create(inquiryId.toString, classOf[ReservationRequest]), Left
         (RideHailVehicleTakenError))
     }
@@ -535,7 +518,7 @@ object RideHailingManager {
                                 rnd1Response: RoutingResponse, rnd2Response: RoutingResponse)
 
 
-  def props(name: String, services: BeamServices, router: ActorRef, boundingBox: Envelope, surgePricingManager: RideHailSurgePricingManager) = {
-    Props(new RideHailingManager(name, services, router, boundingBox,surgePricingManager))
+  def props(services: BeamServices, scheduler: ActorRef, router: ActorRef, boundingBox: Envelope, surgePricingManager: RideHailSurgePricingManager) = {
+    Props(new RideHailingManager(services, scheduler, router, boundingBox, surgePricingManager))
   }
 }
