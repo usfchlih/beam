@@ -53,7 +53,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   // val DefaultCostPerMile = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMile)
   val DefaultCostPerMinute = BigDecimal(beamServices.beamConfig.beam.agentsim.agents.rideHailing.defaultCostPerMinute)
   val radius: Double = 5000
-  val selfTimerTimoutDuration=10*60 // TODO: set from config
+  val selfTimerTimoutDuration=2*60 // TODO: set from config
 
   //TODO improve search to take into account time when available
   private val availableRideHailingAgentSpatialIndex = {
@@ -80,7 +80,6 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   var nextScheduleTriggerRepositioningTimer:ScheduleTrigger=_
   var nextScheduleTriggerRepositioningTimer_triggerId:Long=_
-  var rideHailStartLeg:ScheduleTrigger=_
   var currentTime:Double=_
 
   /**
@@ -123,7 +122,6 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
         var passengerSchedule = PassengerSchedule()
         passengerSchedule = passengerSchedule.addLegs(rnd1Response.itineraries.head.toBeamTrip.legs) // Adds
         putIntoService(rnd1)
-        rideHailStartLeg = ScheduleTrigger(StartLegTrigger(passengerSchedule.schedule.firstKey.startTime, passengerSchedule.schedule.firstKey), rnd1.rideHailAgent)
         rnd1.rideHailAgent ! ModifyPassengerSchedule(passengerSchedule, None)
         } else {
         scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer))
@@ -301,8 +299,8 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
         sender() ! ReservationResponse(Id.create(inquiryId.toString, classOf[ReservationRequest]), Left
         (UnknownInquiryIdError))
       }
-    case ModifyPassengerScheduleAck(inquiryIDOption, triggersToSchedule) =>
-      sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(rideHailStartLeg)
+    case ModifyPassengerScheduleAck(_, triggersToSchedule) =>
+      sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(triggersToSchedule)
 
     case ReleaseVehicleReservation(_, vehId) =>
       lockedVehicles -= vehId
@@ -323,8 +321,8 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     nextScheduleTriggerRepositioningTimer_triggerId=triggerId
   }
 
-  private def sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(nextTrigger: ScheduleTrigger): Unit ={
-    scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,Vector(nextScheduleTriggerRepositioningTimer,nextTrigger))
+  private def sendoutAckMessageToSchedulerForRideHailAllocationmanagerTimeout(triggers: Seq[ScheduleTrigger]): Unit ={
+    scheduler ! CompletionNotice(nextScheduleTriggerRepositioningTimer_triggerId,triggers :+ nextScheduleTriggerRepositioningTimer)
   }
 
   private def findClosestRideHailingAgents(inquiryId: Id[RideHailingInquiry], customerPickUp: Location) = {

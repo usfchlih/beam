@@ -94,6 +94,7 @@ class RideHailingAgent(override val id: Id[RideHailingAgent], val scheduler: Act
 
   val myUnhandled: StateFunction =  {
     case Event(ModifyPassengerSchedule(updatedPassengerSchedule, requestId), data) =>
+      log.info("{}", updatedPassengerSchedule)
       // Ride-hailing manager wants us to drive,
       // but we are not Idle.
       // Not being Idle means we cannot return a trigger to be scheduled to start driving.

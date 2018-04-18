@@ -94,9 +94,11 @@ trait DrivesVehicle[T <: DrivingData] extends BeamAgent[T] with HasServices {
         scheduler ! ScheduleTrigger(NotifyLegStartTrigger(leg.startTime, leg), sender())
         scheduler ! ScheduleTrigger(NotifyLegEndTrigger(leg.endTime, leg), sender())
       })
-      val currentLeg = data.passengerSchedule.schedule.keys.drop(data.currentLegPassengerScheduleIndex).head
-      if (stateName == Driving && legs.contains(currentLeg)) {
-        scheduler ! ScheduleTrigger(NotifyLegStartTrigger(currentLeg.startTime, currentLeg), sender())
+      if (stateName == Driving) {
+        val currentLeg = data.passengerSchedule.schedule.keys.drop(data.currentLegPassengerScheduleIndex).head
+        if (legs.contains(currentLeg)) {
+          scheduler ! ScheduleTrigger(NotifyLegStartTrigger(currentLeg.startTime, currentLeg), sender())
+        }
       }
       stay() using data.withPassengerSchedule(data.passengerSchedule.addPassenger(req.passengerVehiclePersonId, legs)).asInstanceOf[T] replying ReservationResponse(req.requestId, Right(ReserveConfirmInfo(req.departFrom, req.arriveAt, req.passengerVehiclePersonId)))
 
