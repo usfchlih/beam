@@ -198,7 +198,7 @@ dependencies {
     compile("io.kamon:kamon-akka-2.4_${scalaBinaryVersion}:${kamonVersion}")
 //    compile("io.kamon:kamon-statsd_${scalaBinaryVersion}:${kamonVersion}")
 //    compile "io.kamon:kamon-influxdb_${scalaBinaryVersion}:0.6.9"
-//    compile("io.kamon:kamon-log-reporter_${scalaBinaryVersion}:${kamonVersion}")
+    compile("io.kamon:kamon-log-reporter_${scalaBinaryVersion}:${kamonVersion}")
 
 
     /////////////
@@ -244,6 +244,13 @@ task periodicTest(dependsOn: ['testClasses'], type: JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
 }
 
+/* Task to run tests periodically on continue integration server */
+task taggedTest(dependsOn: ['testClasses'], type: JavaExec) {
+    main = 'org.scalatest.tools.Runner'
+    jvmArgs = ["-javaagent:build/aspectjweaver-1.8.10.jar"]
+    args = ['-R', 'build/classes/scala/test', '-o', '-n'] << (project.hasProperty("tags") ? project.findProperty('tags') : 'org.scalatest.Ignore')
+    classpath = sourceSets.test.runtimeClasspath
+}
 //////////////////////////////////////////////////////////////////////
 // Amazon WS task to run beam sim on Lambda
 //////////////////////////////////////////////////////////////////////
