@@ -32,11 +32,13 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.mockito.MockitoSugar
+import org.scalatest.Ignore
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+@Ignore
 class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFactory.parseString(
   """
   akka.loglevel="OFF"
