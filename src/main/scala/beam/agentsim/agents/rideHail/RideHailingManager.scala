@@ -329,7 +329,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   }
 
-  private def getRandomCoordinates(locations: util.List[RideHailingAgentLocation]): (Location, Location) = {
+  private def getRandomCoordinates(locations: util.List[RideHailingAgentLocation]): (RideHailingAgentLocation, RideHailingAgentLocation) = {
 
     val total = locations.size()
 
@@ -343,7 +343,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val obj1: RideHailingAgentLocation = locations.get(start)
     val obj2: RideHailingAgentLocation = locations.get(end)
-    (obj1.currentLocation.loc, obj2.currentLocation.loc)
+    (obj1, obj2)
   }
 
   private def testRouterPerformance() = {
@@ -366,12 +366,17 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val departureTime: BeamTime = DiscreteTime(0)
 
+
+
     while(i < totalRequests) {
 
-      val coords: (Location, Location) = getRandomCoordinates(locations)
+      val _locations: (RideHailingAgentLocation, RideHailingAgentLocation) = getRandomCoordinates(locations)
 
-      val future =  router ? RoutingRequest(coords._1, coords._2,
-        departureTime, Vector(), Vector())
+      val rideHailingVehicleAtOrigin = StreetVehicle(_locations._1.vehicleId, SpaceTime(
+        (_locations._1.currentLocation.loc, departureTime.atTime)), CAR, asDriver = false)
+
+      val future =  router ? RoutingRequest(_locations._1.currentLocation.loc, _locations._2.currentLocation.loc,
+        departureTime, Vector(), Vector(rideHailingVehicleAtOrigin))
 
       futureList += future
       i += 1
@@ -380,10 +385,21 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     val compositeFuture: Future[ListBuffer[Any]] = Future.sequence(futureList)
     val result: ListBuffer[Any] = Await.result(compositeFuture, 2 minute)
 
+
+
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime")
+    System.out.println(s"Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
 
+    var counter = 0
+    for(res <- result){
+
+      if(counter % 10000 == 0){
+        System.out.println(res)
+      }
+
+      counter += 1
+    }
 
     // End Test code for performance
 
