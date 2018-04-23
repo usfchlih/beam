@@ -1,8 +1,9 @@
 package beam.agentsim.agents.rideHail
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration._
+import java.util
+import java.util.concurrent.{ThreadLocalRandom, TimeUnit}
 
+import scala.concurrent.duration._
 import beam.agentsim.agents.BeamAgent.Finish
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.pattern._
@@ -63,6 +64,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   val selfTimerTimoutDuration=10*60 // TODO: set from config
 
   //TODO improve search to take into account time when available
+  // TODO ASIF USE THIS TO GRAB TWO RANDOM LOCATIONS
   private val availableRideHailingAgentSpatialIndex = {
     new QuadTree[RideHailingAgentLocation](
       boundingBox.getMinX,
@@ -91,11 +93,10 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   override def receive: Receive = {
     case TestPerformance =>
-      val startLocation = new Coord(0, 0)
-      val endLocation = new Coord(100, 100)
-      val departureTime: BeamTime = DiscreteTime(0)
 
-      testRouterPerformance(startLocation, endLocation, departureTime)
+
+
+      testRouterPerformance()
     case NotifyIterationEnds() =>
 
       surgePricingManager.updateRevenueStats()
@@ -337,22 +338,48 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   }
 
-  private def testRouterPerformance(startLocation: Location, endLocation: Location, departureTime: BeamTime) = {
+  private def getRandomCoordinates(locations: util.List[RideHailingAgentLocation]): (Location, Location) = {
+
+    val total = locations.size()
+
+    val start = ThreadLocalRandom.current().nextInt(0, total)
+    var end = ThreadLocalRandom.current().nextInt(0, total)
+
+    while(start == end){
+      end = ThreadLocalRandom.current().nextInt(0, total)
+    }
+
+
+    val obj1: RideHailingAgentLocation = locations.get(start)
+    val obj2: RideHailingAgentLocation = locations.get(end)
+    (obj1.currentLocation.loc, obj2.currentLocation.loc)
+  }
+
+  private def testRouterPerformance() = {
+
+    val locations = new util.ArrayList(availableRideHailingAgentSpatialIndex.values())
+
     // Test code for performance
     implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
     import context.dispatcher
     System.out.println(s"Going to run test code")
 
-    var totalRequests = 1000
+
+
+    var totalRequests = 100000
     var i = 0
 
     val futureList = ListBuffer[Future[Any]]()
 
     val startTime = System.currentTimeMillis()
 
+    val departureTime: BeamTime = DiscreteTime(0)
+
     while(i < totalRequests) {
 
-      val future =  router ? RoutingRequest(startLocation, endLocation,
+      val coords: (Location, Location) = getRandomCoordinates(locations)
+
+      val future =  router ? RoutingRequest(coords._1, coords._2,
         departureTime, Vector(), Vector())
 
       futureList += future

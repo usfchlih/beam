@@ -74,6 +74,8 @@ class BeamMobsim @Inject()(val beamServices: BeamServices, val transportNetwork:
       envelopeInUTM.expandBy(beamServices.beamConfig.beam.spatial.boundingBoxBuffer)
 
       private val rideHailingManager = context.actorOf(RideHailingManager.props(beamServices, scheduler, beamServices.beamRouter, envelopeInUTM,rideHailSurgePricingManager), "RideHailingManager")
+      // TODO ASIF : Add the test call here
+      //rideHailingManager ! RideHailingManager.TestPerformance
       context.watch(rideHailingManager)
       private val population = context.actorOf(Population.props(scenario, beamServices, scheduler, transportNetwork, beamServices.beamRouter, rideHailingManager, eventsManager), "population")
       context.watch(population)
