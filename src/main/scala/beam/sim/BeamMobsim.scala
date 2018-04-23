@@ -133,10 +133,15 @@ class BeamMobsim @Inject()(val beamServices: BeamServices, val transportNetwork:
       override def receive = {
 
         case CompletionNotice(_, _) =>
+
+          rideHailingManager ! RideHailingManager.TestPerformance
+
           log.debug("Scheduler is finished.")
           cleanupRideHailingAgents()
           cleanupVehicle()
           population ! Finish
+
+
           val future=rideHailingManager.ask(NotifyIterationEnds())
           Await.ready(future, timeout.duration).value
           context.stop(rideHailingManager)
@@ -158,6 +163,9 @@ class BeamMobsim @Inject()(val beamServices: BeamServices, val transportNetwork:
         case "Run!" =>
           runSender = sender
           log.info("Running BEAM Mobsim")
+
+
+
           scheduler ! StartSchedule(beamServices.iterationNumber)
       }
 

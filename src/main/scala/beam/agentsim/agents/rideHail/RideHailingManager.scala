@@ -1,6 +1,7 @@
 package beam.agentsim.agents.rideHail
 
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration._
 
 import beam.agentsim.agents.BeamAgent.Finish
 import akka.actor.{ActorLogging, ActorRef, Props}
@@ -35,7 +36,8 @@ import org.matsim.core.utils.collections.QuadTree
 import org.matsim.core.utils.geometry.CoordUtils
 import org.matsim.vehicles.Vehicle
 
-import scala.concurrent.Future
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Random
 
@@ -88,6 +90,12 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   private var lockedVehicles = Set[Id[Vehicle]]()
 
   override def receive: Receive = {
+    case TestPerformance =>
+      val startLocation = new Coord(0, 0)
+      val endLocation = new Coord(100, 100)
+      val departureTime: BeamTime = DiscreteTime(0)
+
+      testRouterPerformance(startLocation, endLocation, departureTime)
     case NotifyIterationEnds() =>
 
       surgePricingManager.updateRevenueStats()
@@ -137,11 +145,15 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
           .filterNot(_.equals(idRnd1))
           .apply(rnd.nextInt(availableKeyset.size - 1))
 
+
+
         for{
           rnd1 <- availableRideHailVehicles.get(idRnd1)
           rnd2 <- availableRideHailVehicles.get(idRnd2)
         } yield {
+
           val departureTime: BeamTime = DiscreteTime(0)
+
           val futureRnd1AgentResponse = router ? RoutingRequest(
             rnd1.currentLocation.loc, rnd2.currentLocation.loc, departureTime, Vector(), Vector()) //TODO what should go in vectors
           // get route from customer to destination
@@ -310,6 +322,9 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     //TODO: restarted, and probably someone will wait forever for its reply.
     implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
 
+    // Test Code for performance
+    //testRouterPerformance(rideHailingLocation.currentLocation.loc, customerPickUp, departAt)
+
     // get route from ride hailing vehicle to customer
     val futureRideHailingAgent2CustomerResponse = router ? RoutingRequest(rideHailingLocation
           .currentLocation.loc, customerPickUp, departAt, Vector(), Vector(rideHailingVehicleAtOrigin))
@@ -318,6 +333,42 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     // get route from customer to destination
     val futureRideHailing2DestinationResponse = router ? RoutingRequest(customerPickUp, destination, departAt, Vector(), Vector(customerAgentBody, rideHailingVehicleAtPickup))
     (futureRideHailingAgent2CustomerResponse, futureRideHailing2DestinationResponse)
+
+
+  }
+
+  private def testRouterPerformance(startLocation: Location, endLocation: Location, departureTime: BeamTime) = {
+    // Test code for performance
+    implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
+    import context.dispatcher
+    System.out.println(s"Going to run test code")
+
+    var totalRequests = 1000
+    var i = 0
+
+    val futureList = ListBuffer[Future[Any]]()
+
+    val startTime = System.currentTimeMillis()
+
+    while(i < totalRequests) {
+
+      val future =  router ? RoutingRequest(startLocation, endLocation,
+        departureTime, Vector(), Vector())
+
+      futureList += future
+      i += 1
+    }
+
+    val compositeFuture: Future[ListBuffer[Any]] = Future.sequence(futureList)
+    val result: ListBuffer[Any] = Await.result(compositeFuture, 2 minute)
+
+    val endTime = System.currentTimeMillis()
+    val differenceInTime = endTime - startTime
+    System.out.println(s"Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime")
+
+
+    // End Test code for performance
+
   }
 
 
@@ -457,6 +508,8 @@ object RideHailingManager {
   case class RideHailingAgentLocation(rideHailAgent: ActorRef, vehicleId: Id[Vehicle], currentLocation: SpaceTime)
 
   case object RideUnavailableAck
+
+  case object TestPerformance
 
   case object RideAvailableAck
 
