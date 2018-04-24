@@ -373,7 +373,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
       val _locations: (RideHailingAgentLocation, RideHailingAgentLocation) = getRandomCoordinates(locations)
 
       val rideHailingVehicleAtOrigin = StreetVehicle(_locations._1.vehicleId, SpaceTime(
-        (_locations._1.currentLocation.loc, departureTime.atTime)), CAR, asDriver = false)
+        (_locations._1.currentLocation.loc, departureTime.atTime)), CAR, asDriver = true)
 
       val future =  router ? RoutingRequest(_locations._1.currentLocation.loc, _locations._2.currentLocation.loc,
         departureTime, Vector(), Vector(rideHailingVehicleAtOrigin))
@@ -389,9 +389,9 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
+    System.out.println(s"Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
 
-    var counter = 0
+    /*var counter = 0
     for(res <- result){
 
       if(counter % 10000 == 0){
@@ -399,7 +399,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
       }
 
       counter += 1
-    }
+    }*/
 
     // End Test code for performance
 
