@@ -137,7 +137,8 @@ class BeamMobsim @Inject()(val beamServices: BeamServices, val transportNetwork:
         case CompletionNotice(_, _) =>
 
           rideHailingManager ! RideHailingManager.TestR5RouterPerformance
-          rideHailingManager ! RideHailingManager.TestMatsimRouterPerformance
+          rideHailingManager ! RideHailingManager.TestMatsimRouterPerformance("DIJKSTRA")
+          rideHailingManager ! RideHailingManager.TestMatsimRouterPerformance("ASTARLANDMARK")
 
           log.debug("Scheduler is finished.")
           cleanupRideHailingAgents()
