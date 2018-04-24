@@ -29,6 +29,7 @@ import org.mockito.Matchers.any
 import org.mockito.Mockito._
 import org.scalatest._
 import org.scalatest.mockito.MockitoSugar
+import org.scalatest.Ignore
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
@@ -44,6 +45,7 @@ import org.matsim.core.network.io.MatsimNetworkReader
 import org.matsim.core.router.util.LeastCostPathCalculator
 import org.matsim.core.scenario.ScenarioUtils
 
+@Ignore
 class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFactory.parseString(
   """
   akka.loglevel="OFF"

@@ -1,8 +1,9 @@
 package beam.agentsim.agents.rideHail
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration._
+import java.util
+import java.util.concurrent.{ThreadLocalRandom, TimeUnit}
 
+import scala.concurrent.duration._
 import beam.agentsim.agents.BeamAgent.Finish
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.pattern._
@@ -54,6 +55,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   val selfTimerTimoutDuration=10*60 // TODO: set from config
 
   //TODO improve search to take into account time when available
+  // TODO ASIF USE THIS TO GRAB TWO RANDOM LOCATIONS
   private val availableRideHailingAgentSpatialIndex = {
     new QuadTree[RideHailingAgentLocation](
       boundingBox.getMinX,
@@ -82,11 +84,10 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   override def receive: Receive = {
     case TestPerformance =>
-      val startLocation = new Coord(0, 0)
-      val endLocation = new Coord(100, 100)
-      val departureTime: BeamTime = DiscreteTime(0)
 
-      testRouterPerformance(startLocation, endLocation, departureTime)
+
+
+      testRouterPerformance()
     case NotifyIterationEnds() =>
 
       surgePricingManager.updateRevenueStats()
@@ -328,23 +329,54 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   }
 
-  private def testRouterPerformance(startLocation: Location, endLocation: Location, departureTime: BeamTime) = {
+  private def getRandomCoordinates(locations: util.List[RideHailingAgentLocation]): (RideHailingAgentLocation, RideHailingAgentLocation) = {
+
+    val total = locations.size()
+
+    val start = ThreadLocalRandom.current().nextInt(0, total)
+    var end = ThreadLocalRandom.current().nextInt(0, total)
+
+    while(start == end){
+      end = ThreadLocalRandom.current().nextInt(0, total)
+    }
+
+
+    val obj1: RideHailingAgentLocation = locations.get(start)
+    val obj2: RideHailingAgentLocation = locations.get(end)
+    (obj1, obj2)
+  }
+
+  private def testRouterPerformance() = {
+
+    val locations = new util.ArrayList(availableRideHailingAgentSpatialIndex.values())
+
     // Test code for performance
     implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
     import context.dispatcher
     System.out.println(s"Going to run test code")
 
-    var totalRequests = 1000
+
+
+    var totalRequests = 100000
     var i = 0
 
     val futureList = ListBuffer[Future[Any]]()
 
     val startTime = System.currentTimeMillis()
 
+    val departureTime: BeamTime = DiscreteTime(0)
+
+
+
     while(i < totalRequests) {
 
-      val future =  router ? RoutingRequest(startLocation, endLocation,
-        departureTime, Vector(), Vector())
+      val _locations: (RideHailingAgentLocation, RideHailingAgentLocation) = getRandomCoordinates(locations)
+
+      val rideHailingVehicleAtOrigin = StreetVehicle(_locations._1.vehicleId, SpaceTime(
+        (_locations._1.currentLocation.loc, departureTime.atTime)), CAR, asDriver = true)
+
+      val future =  router ? RoutingRequest(_locations._1.currentLocation.loc, _locations._2.currentLocation.loc,
+        departureTime, Vector(), Vector(rideHailingVehicleAtOrigin))
 
       futureList += future
       i += 1
@@ -353,10 +385,21 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     val compositeFuture: Future[ListBuffer[Any]] = Future.sequence(futureList)
     val result: ListBuffer[Any] = Await.result(compositeFuture, 2 minute)
 
+
+
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime")
+    System.out.println(s"Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
 
+    /*var counter = 0
+    for(res <- result){
+
+      if(counter % 10000 == 0){
+        System.out.println(res)
+      }
+
+      counter += 1
+    }*/
 
     // End Test code for performance
 
