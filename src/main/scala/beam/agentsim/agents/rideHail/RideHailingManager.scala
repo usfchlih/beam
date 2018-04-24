@@ -364,7 +364,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
 
 
-    var totalRequests = 100000
+    var totalRequests = 1000
     var i = 0
 
     val futureList = ListBuffer[Future[Any]]()
@@ -416,7 +416,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     System.out.println(s"Going to run test for matsim router code")
 
-    var totalRequests = 100000
+    var totalRequests = 1000
     var i = 0
 
     val startTime = System.currentTimeMillis()
