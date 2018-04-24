@@ -40,6 +40,7 @@ import org.matsim.core.network.NetworkUtils
 import org.matsim.core.network.io.MatsimNetworkReader
 import org.matsim.core.router.{Dijkstra, DijkstraFactory}
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
+import org.matsim.core.router.util.LeastCostPathCalculator.Path
 import org.matsim.core.router.util.TravelTimeUtils
 import org.matsim.core.scoring.functions.OnlyTravelTimeDependentScoringFunction
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator
@@ -428,17 +429,21 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     while(i < totalRequests) {
 
-      val node1Idx = ThreadLocalRandom.current().nextInt(0, links.size())
-      var node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
-      while(node1Idx == node2Idx){
-        node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      val link1Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      val node1 = links.get(link1Idx).getFromNode()
+
+      var link2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      var node2 = links.get(link2Idx).getToNode()
+
+      while(node1.getCoord.equals(node2.getCoord)){
+        link2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+        node2 = links.get(link2Idx).getToNode()
       }
 
-      val node1 = links.get(node1Idx).getFromNode()
-      val node2 = links.get(node2Idx).getToNode()
+      //val path: Path =
+        dijkstra.calcLeastCostPath(node1, node2, 0d, null, null)
 
-      dijkstra.calcLeastCostPath(node1, node2, 0d, null, null)
-
+      //System.out.println(path)
       i += 1
     }
 
