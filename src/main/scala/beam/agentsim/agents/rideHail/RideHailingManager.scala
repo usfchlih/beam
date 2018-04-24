@@ -28,11 +28,19 @@ import beam.router.BeamRouter.{Location, RoutingRequest, RoutingResponse}
 import beam.router.Modes.BeamMode._
 import beam.router.RoutingModel
 import beam.router.RoutingModel.{BeamTime, BeamTrip, DiscreteTime}
+import beam.sim.config.BeamConfig.Matsim.Modules.PlanCalcScore
 import beam.sim.{BeamServices, HasServices}
 import com.eaio.uuid.UUIDGen
 import com.google.common.cache.{Cache, CacheBuilder}
 import com.vividsolutions.jts.geom.Envelope
 import org.matsim.api.core.v01.{Coord, Id}
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup
+import org.matsim.core.network.LinkQuadTree.Node
+import org.matsim.core.network.NetworkUtils
+import org.matsim.core.network.io.MatsimNetworkReader
+import org.matsim.core.router.Dijkstra
+import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
+import org.matsim.core.scoring.functions.OnlyTravelTimeDependentScoringFunction
 import org.matsim.core.utils.collections.QuadTree
 import org.matsim.core.utils.geometry.CoordUtils
 import org.matsim.vehicles.Vehicle
@@ -83,11 +91,8 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   private var lockedVehicles = Set[Id[Vehicle]]()
 
   override def receive: Receive = {
-    case TestPerformance =>
-
-
-
-      testRouterPerformance()
+    case TestR5RouterPerformance => testRouterPerformance()
+    case TestMatsimRouterPerformance => testMatsimRouterPerformance()
     case NotifyIterationEnds() =>
 
       surgePricingManager.updateRevenueStats()
@@ -402,6 +407,48 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     }*/
 
     // End Test code for performance
+  }
+
+
+  private def testMatsimRouterPerformance() = {
+
+
+    System.out.println(s"Going to run test for matsim router code")
+
+    var totalRequests = 100000
+    var i = 0
+
+    val startTime = System.currentTimeMillis()
+
+    val departureTime: BeamTime = DiscreteTime(0)
+
+    while(i < totalRequests) {
+
+
+      val planCalcScore: PlanCalcScore = beamServices.beamConfig.matsim.modules.planCalcScore
+
+      val freespeedTravelTimeAndDisutility: FreespeedTravelTimeAndDisutility =
+        new FreespeedTravelTimeAndDisutility(0, 0, 0)
+
+      val travelTimeFunction = new OnlyTravelTimeDependentScoringFunction()
+      val network = NetworkUtils.createNetwork()
+      new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
+
+      val dijkstra: Dijkstra = new Dijkstra(network, freespeedTravelTimeAndDisutility, travelTimeFunction)
+
+      val node1 = null
+      val node2 = null
+
+      dijkstra.calcLeastCostPath(node1, node2, 0d, null, null)
+
+      i += 1
+    }
+
+
+    val endTime = System.currentTimeMillis()
+    val differenceInTime = endTime - startTime
+    System.out.println(s"Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
+    // End Test code for performance
 
   }
 
@@ -543,7 +590,8 @@ object RideHailingManager {
 
   case object RideUnavailableAck
 
-  case object TestPerformance
+  case object TestR5RouterPerformance
+  case object TestMatsimRouterPerformance
 
   case object RideAvailableAck
 
