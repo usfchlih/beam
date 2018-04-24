@@ -23,7 +23,7 @@ import beam.agentsim.events.SpaceTime
 import beam.agentsim.events.resources.ReservationError
 import beam.agentsim.scheduler.BeamAgentScheduler.{CompletionNotice, ScheduleTrigger}
 import beam.agentsim.scheduler.{Trigger, TriggerWithId}
-import beam.analysis.plots.GraphRideHailingRevenue
+import beam.analysis.plots.{GraphRideHailingRevenue, PersonTravelTimeStats}
 import beam.router.BeamRouter.{Location, RoutingRequest, RoutingResponse}
 import beam.router.Modes.BeamMode._
 import beam.router.RoutingModel
@@ -38,9 +38,11 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup
 import org.matsim.core.network.LinkQuadTree.Node
 import org.matsim.core.network.NetworkUtils
 import org.matsim.core.network.io.MatsimNetworkReader
-import org.matsim.core.router.Dijkstra
+import org.matsim.core.router.{Dijkstra, DijkstraFactory}
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
+import org.matsim.core.router.util.TravelTimeUtils
 import org.matsim.core.scoring.functions.OnlyTravelTimeDependentScoringFunction
+import org.matsim.core.trafficmonitoring.TravelTimeCalculator
 import org.matsim.core.utils.collections.QuadTree
 import org.matsim.core.utils.geometry.CoordUtils
 import org.matsim.vehicles.Vehicle
@@ -394,7 +396,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
+    System.out.println(s"R5Router Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
 
     /*var counter = 0
     for(res <- result){
@@ -412,7 +414,6 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   private def testMatsimRouterPerformance() = {
 
-
     System.out.println(s"Going to run test for matsim router code")
 
     var totalRequests = 100000
@@ -420,24 +421,34 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val startTime = System.currentTimeMillis()
 
-    val departureTime: BeamTime = DiscreteTime(0)
+    val planCalcScore: PlanCalcScore = beamServices.beamConfig.matsim.modules.planCalcScore
+
+    val freespeedTravelTimeAndDisutility: FreespeedTravelTimeAndDisutility = new FreespeedTravelTimeAndDisutility(-1.0, 0.0, 0.0)
+
+
+
+    val network = NetworkUtils.createNetwork()
+    new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
+
+    val factory = new DijkstraFactory(false)
+
+
+    val dijkstra = factory.createPathCalculator(network, freespeedTravelTimeAndDisutility, freespeedTravelTimeAndDisutility)
+
+
+    val links = new util.ArrayList(network.getLinks().values())
+
 
     while(i < totalRequests) {
 
+      val node1Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      var node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      while(node1Idx == node2Idx){
+        node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      }
 
-      val planCalcScore: PlanCalcScore = beamServices.beamConfig.matsim.modules.planCalcScore
-
-      val freespeedTravelTimeAndDisutility: FreespeedTravelTimeAndDisutility =
-        new FreespeedTravelTimeAndDisutility(0, 0, 0)
-
-      val travelTimeFunction = new OnlyTravelTimeDependentScoringFunction()
-      val network = NetworkUtils.createNetwork()
-      new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
-
-      val dijkstra: Dijkstra = new Dijkstra(network, freespeedTravelTimeAndDisutility, travelTimeFunction)
-
-      val node1 = null
-      val node2 = null
+      val node1 = links.get(node1Idx).getFromNode()
+      val node2 = links.get(node2Idx).getToNode()
 
       dijkstra.calcLeastCostPath(node1, node2, 0d, null, null)
 
@@ -447,7 +458,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
+    System.out.println(s"Matsim Router: Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
     // End Test code for performance
 
   }
