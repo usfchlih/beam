@@ -13,39 +13,32 @@ import beam.router.osm.TollCalculator
 import beam.router.r5.NetworkCoordinator
 import beam.router.{BeamRouter, Modes, RoutingModel}
 import beam.sim.BeamServices
-import beam.sim.common.{GeoUtils, GeoUtilsImpl}
+import beam.sim.common.GeoUtilsImpl
 import beam.sim.config.{BeamConfig, MatSimBeamConfigBuilder}
 import beam.sim.metrics.MetricsSupport
 import beam.tags.Performance
 import beam.utils.{BeamConfigUtils, DateUtils}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
+import org.matsim.api.core.v01.{Id, Scenario}
 import org.matsim.api.core.v01.network.{Network, Node}
 import org.matsim.api.core.v01.population.{Activity, Plan}
-import org.matsim.api.core.v01.{Id, Scenario}
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup
 import org.matsim.core.events.EventsManagerImpl
-import org.matsim.core.router.{Dijkstra, DijkstraFactory}
-import org.matsim.vehicles.{VehicleType, VehicleUtils}
+import org.matsim.core.network.io.MatsimNetworkReader
+import org.matsim.core.router.DijkstraFactory
+import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
+import org.matsim.core.scenario.ScenarioUtils
+import org.matsim.vehicles.VehicleUtils
 import org.mockito.Matchers.any
 import org.mockito.Mockito._
-import org.scalatest._
+import org.scalatest.{Ignore, _}
 import org.scalatest.mockito.MockitoSugar
-import org.scalatest.Ignore
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import com.typesafe.config.Config
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup
-import org.matsim.core.router.Dijkstra
-import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
-import org.matsim.core.router.util.LeastCostPathCalculator
-import org.matsim.api.core.v01.Id
-import org.matsim.api.core.v01.Scenario
-import org.matsim.core.network.io.MatsimNetworkReader
-import org.matsim.core.router.util.LeastCostPathCalculator
-import org.matsim.core.scenario.ScenarioUtils
 
-@Ignore
+//@Ignore
 class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFactory.parseString(
   """
   akka.loglevel="OFF"
@@ -54,13 +47,12 @@ class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFac
   with ImplicitSender with MockitoSugar with BeforeAndAfterAllConfigMap with MetricsSupport {
 
   var config: Config = _
+  private val runSet = List(1000, 10000, 25000, 50000, 75000, 100000)
 
   override def beforeAll(configMap: ConfigMap): Unit = {
     val confPath = configMap.getWithDefault("config", "test/input/sf-light/sf-light-25k.conf")
 
     config = BeamConfigUtils.parseFileSubstitutingInputDirectory(confPath).resolve()
-
-
   }
 
   override def afterAll(configMap: ConfigMap): Unit = {
@@ -68,11 +60,11 @@ class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFac
     //    if (isMetricsEnable()) Kamon.shutdown()
   }
 
+
   "An R5 router" must {
 
     "respond with a car route for each trip" taggedAs (Performance) in {
 
-      val n = 100000
 
       //--------------------------------------------
       val beamConfig = BeamConfig(config)
@@ -101,30 +93,33 @@ class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFac
       }
       //--------------------------------------------
 
-      val testSet = getR5Dataset(scenario, n)
-      val start = System.currentTimeMillis()
-      try {
-        testSet.foreach(pair => {
-          val origin = pair(0).getCoord
-          val destination = pair(1).getCoord
-          val time = RoutingModel.DiscreteTime(pair(0).getEndTime.toInt)
-          router ! RoutingRequest(origin, destination, time, Vector(), Vector(
-            StreetVehicle(Id.createVehicleId("116378-2"), new SpaceTime(origin, 0), Modes.BeamMode.CAR, asDriver = true)))
-          val response = expectMsgType[RoutingResponse]
-          assert(response.isInstanceOf[RoutingResponse])
+      val activitySet = getR5Dataset(scenario, 100000)
+      runSet.foreach( n => {
+        val testSet = activitySet.take(n)
+        val start = System.currentTimeMillis()
+        try {
+          testSet.foreach(pair => {
+            val origin = pair(0).getCoord
+            val destination = pair(1).getCoord
+            val time = RoutingModel.DiscreteTime(pair(0).getEndTime.toInt)
+            router ! RoutingRequest(origin, destination, time, Vector(), Vector(
+              StreetVehicle(Id.createVehicleId("116378-2"), new SpaceTime(origin, 0), Modes.BeamMode.CAR, asDriver = true)))
+            val response = expectMsgType[RoutingResponse]
+            assert(response.isInstanceOf[RoutingResponse])
 
-        })
-      } finally {
-        val latency = System.currentTimeMillis() - start
-        println()
-        println(s"Time to complete ${testSet.size} requests is : ${latency}ms around ${latency/1000.0}sec")
-      }
+          })
+        } finally {
+          val latency = System.currentTimeMillis() - start
+          println()
+          println(s"Time to complete ${testSet.size} requests is : ${latency}ms around ${latency / 1000.0}sec")
+        }
+      })
     }
   }
 
   "A MATSIM Router" must {
 
-    "respond with a path" in {
+    "respond with a path" taggedAs (Performance) in {
       val matsimConfig = new MatSimBeamConfigBuilder(config).buildMatSamConf()
       val scenario = ScenarioUtils.createScenario(matsimConfig)
       val network = scenario.getNetwork
@@ -138,16 +133,17 @@ class RouterPerformanceSpec extends TestKit(ActorSystem("router-test", ConfigFac
       //      new Dijkstra(network, travelTimeCostCalculator, travelTimeCostCalculator)
       }
 
-      val start = System.currentTimeMillis();
-      val testSet = getDijkstraDataset(network, 100000)
-      testSet.foreach({ pare =>
-        val path = routerAlgo.calcLeastCostPath(pare(0), pare(1), 8.0 * 3600, null, null)
+      val nodeSet = getDijkstraDataset(network, 100000)
+      runSet.foreach( n => {
+        val testSet = nodeSet.take(n)
+        val start = System.currentTimeMillis();
+        testSet.foreach({ pare =>
+          val path = routerAlgo.calcLeastCostPath(pare(0), pare(1), 8.0 * 3600, null, null)
+        })
+        val latency = System.currentTimeMillis() - start
+        println()
+        println(s"Time to complete ${testSet.size} requests is : ${latency}ms around ${latency / 1000.0}sec")
       })
-      val latency = System.currentTimeMillis() - start
-      println()
-      println(s"Time to complete ${testSet.size} requests is : ${latency}ms around ${latency/1000.0}sec")
-
-//      println(path)
     }
   }
 
