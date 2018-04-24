@@ -399,10 +399,13 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
 
     val factory = if(algorithm == "DIJKSTRA"){
+      System.out.println(s"Going to create factory for 'Dijkstra'")
       new DijkstraFactory(false)
     }else if(algorithm == "ASTARLANDMARK"){
+      System.out.println(s"Going to create factory for 'AStarLandmarks'")
       new AStarLandmarksFactory()
     }else{
+      System.out.println(s"Going to create factory for 'Dijkstra'")
       new DijkstraFactory(false)
     }
 
