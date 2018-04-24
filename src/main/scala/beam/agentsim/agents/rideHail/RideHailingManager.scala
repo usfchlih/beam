@@ -360,7 +360,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     // Test code for performance
     implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
     import context.dispatcher
-    System.out.println(s"Going to run test code")
+    System.out.println(s"Going to run test for R5 Router")
 
 
 
@@ -369,11 +369,11 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val futureList = ListBuffer[Future[Any]]()
 
-    val startTime = System.currentTimeMillis()
 
     val departureTime: BeamTime = DiscreteTime(0)
 
 
+    val startTime = System.currentTimeMillis()
 
     while(i < totalRequests) {
 
@@ -397,35 +397,21 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
     System.out.println(s"R5Router Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
-
-    /*var counter = 0
-    for(res <- result){
-
-      if(counter % 10000 == 0){
-        System.out.println(res)
-      }
-
-      counter += 1
-    }*/
-
     // End Test code for performance
   }
 
 
   private def testMatsimRouterPerformance() = {
 
-    System.out.println(s"Going to run test for matsim router code")
+    System.out.println(s"Going to run test for Matsim router code")
 
     var totalRequests = 1000
     var i = 0
 
-    val startTime = System.currentTimeMillis()
 
     val planCalcScore: PlanCalcScore = beamServices.beamConfig.matsim.modules.planCalcScore
 
     val freespeedTravelTimeAndDisutility: FreespeedTravelTimeAndDisutility = new FreespeedTravelTimeAndDisutility(-1.0, 0.0, 0.0)
-
-
 
     val network = NetworkUtils.createNetwork()
     new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
@@ -438,6 +424,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
     val links = new util.ArrayList(network.getLinks().values())
 
+    val startTime = System.currentTimeMillis()
 
     while(i < totalRequests) {
 
