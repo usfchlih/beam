@@ -247,7 +247,7 @@ task periodicTest(dependsOn: ['testClasses'], type: JavaExec) {
 /* Task to run tests periodically on continue integration server */
 task taggedTest(dependsOn: ['testClasses'], type: JavaExec) {
     main = 'org.scalatest.tools.Runner'
-    jvmArgs = ["-javaagent:build/aspectjweaver-1.8.10.jar"]
+    
     args = ['-R', 'build/classes/scala/test', '-o', '-n'] << (project.hasProperty("tags") ? project.findProperty('tags') : 'org.scalatest.Ignore')
     classpath = sourceSets.test.runtimeClasspath
 }
