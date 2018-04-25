@@ -38,8 +38,9 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup
 import org.matsim.core.network.LinkQuadTree.Node
 import org.matsim.core.network.NetworkUtils
 import org.matsim.core.network.io.MatsimNetworkReader
-import org.matsim.core.router.{Dijkstra, DijkstraFactory}
+import org.matsim.core.router.{AStarLandmarksFactory, Dijkstra, DijkstraFactory}
 import org.matsim.core.router.costcalculators.FreespeedTravelTimeAndDisutility
+import org.matsim.core.router.util.LeastCostPathCalculator.Path
 import org.matsim.core.router.util.TravelTimeUtils
 import org.matsim.core.scoring.functions.OnlyTravelTimeDependentScoringFunction
 import org.matsim.core.trafficmonitoring.TravelTimeCalculator
@@ -94,7 +95,9 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   override def receive: Receive = {
     case TestR5RouterPerformance => testRouterPerformance()
-    case TestMatsimRouterPerformance => testMatsimRouterPerformance()
+    case TestMatsimRouterPerformance(algorithm: String) => {
+      testMatsimRouterPerformance(algorithm)
+    }
     case NotifyIterationEnds() =>
 
       surgePricingManager.updateRevenueStats()
@@ -339,14 +342,12 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   private def getRandomCoordinates(locations: util.List[RideHailingAgentLocation]): (RideHailingAgentLocation, RideHailingAgentLocation) = {
 
     val total = locations.size()
-
     val start = ThreadLocalRandom.current().nextInt(0, total)
     var end = ThreadLocalRandom.current().nextInt(0, total)
 
     while(start == end){
       end = ThreadLocalRandom.current().nextInt(0, total)
     }
-
 
     val obj1: RideHailingAgentLocation = locations.get(start)
     val obj2: RideHailingAgentLocation = locations.get(end)
@@ -355,26 +356,16 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
 
   private def testRouterPerformance() = {
 
+    val totalRequests = 100
     val locations = new util.ArrayList(availableRideHailingAgentSpatialIndex.values())
-
     // Test code for performance
     implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
     import context.dispatcher
     System.out.println(s"Going to run test for R5 Router")
-
-
-
-    var totalRequests = 1000
-    var i = 0
-
     val futureList = ListBuffer[Future[Any]]()
-
-
     val departureTime: BeamTime = DiscreteTime(0)
-
-
+    var i = 0
     val startTime = System.currentTimeMillis()
-
     while(i < totalRequests) {
 
       val _locations: (RideHailingAgentLocation, RideHailingAgentLocation) = getRandomCoordinates(locations)
@@ -390,9 +381,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     }
 
     val compositeFuture: Future[ListBuffer[Any]] = Future.sequence(futureList)
-    val result: ListBuffer[Any] = Await.result(compositeFuture, 2 minute)
-
-
+    val result: ListBuffer[Any] = Await.result(compositeFuture, 5 minute)
 
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
@@ -400,54 +389,53 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
     // End Test code for performance
   }
 
+  private def testMatsimRouterPerformance(algorithm: String) = {
 
-  private def testMatsimRouterPerformance() = {
-
-    System.out.println(s"Going to run test for Matsim router code")
-
-    var totalRequests = 1000
-    var i = 0
-
-
-    val planCalcScore: PlanCalcScore = beamServices.beamConfig.matsim.modules.planCalcScore
+    val totalRequests = 100
+    System.out.println(s"Going to run test for Matsim router code $algorithm")
 
     val freespeedTravelTimeAndDisutility: FreespeedTravelTimeAndDisutility = new FreespeedTravelTimeAndDisutility(-1.0, 0.0, 0.0)
-
     val network = NetworkUtils.createNetwork()
     new MatsimNetworkReader(network).readFile(beamServices.beamConfig.matsim.modules.network.inputNetworkFile)
 
-    val factory = new DijkstraFactory(false)
+    val factory = if(algorithm == "DIJKSTRA"){
+      System.out.println(s"Going to create factory for 'Dijkstra'")
+      new DijkstraFactory(false)
+    }else if(algorithm == "ASTARLANDMARK"){
+      System.out.println(s"Going to create factory for 'AStarLandmarks'")
+      new AStarLandmarksFactory()
+    }else{
+      System.out.println(s"Going to create factory for 'Dijkstra'")
+      new DijkstraFactory(false)
+    }
 
-
-    val dijkstra = factory.createPathCalculator(network, freespeedTravelTimeAndDisutility, freespeedTravelTimeAndDisutility)
-
-
+    val pathCalculator = factory.createPathCalculator(network, freespeedTravelTimeAndDisutility, freespeedTravelTimeAndDisutility)
     val links = new util.ArrayList(network.getLinks().values())
-
+    var i = 0
     val startTime = System.currentTimeMillis()
 
     while(i < totalRequests) {
 
-      val node1Idx = ThreadLocalRandom.current().nextInt(0, links.size())
-      var node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
-      while(node1Idx == node2Idx){
-        node2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      val link1Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      val node1 = links.get(link1Idx).getFromNode()
+      var link2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+      var node2 = links.get(link2Idx).getToNode()
+
+      while(node1.getCoord.equals(node2.getCoord)){
+        link2Idx = ThreadLocalRandom.current().nextInt(0, links.size())
+        node2 = links.get(link2Idx).getToNode()
       }
 
-      val node1 = links.get(node1Idx).getFromNode()
-      val node2 = links.get(node2Idx).getToNode()
-
-      dijkstra.calcLeastCostPath(node1, node2, 0d, null, null)
-
+      //val path: Path =
+        pathCalculator.calcLeastCostPath(node1, node2, 0d, null, null)
+      //System.out.println(path)
       i += 1
     }
 
-
     val endTime = System.currentTimeMillis()
     val differenceInTime = endTime - startTime
-    System.out.println(s"Matsim Router: Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
+    System.out.println(s"Matsim Router($algorithm): Total requests $totalRequests Start Time: $startTime End Time: $endTime DifferenceInTime: $differenceInTime ms (milliseconds)")
     // End Test code for performance
-
   }
 
 
@@ -589,7 +577,7 @@ object RideHailingManager {
   case object RideUnavailableAck
 
   case object TestR5RouterPerformance
-  case object TestMatsimRouterPerformance
+  case class TestMatsimRouterPerformance(algorithm: String)
 
   case object RideAvailableAck
 
