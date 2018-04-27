@@ -22,8 +22,16 @@ import com.google.inject.Inject
 import com.typesafe.scalalogging.LazyLogging
 import org.matsim.api.core.v01.Scenario
 import org.matsim.core.api.experimental.events.EventsManager
-import org.matsim.core.controler.events.{IterationEndsEvent, ShutdownEvent, StartupEvent}
-import org.matsim.core.controler.listener.{IterationEndsListener, ShutdownListener, StartupListener}
+import org.matsim.core.controler.events.{
+  IterationEndsEvent,
+  ShutdownEvent,
+  StartupEvent
+}
+import org.matsim.core.controler.listener.{
+  IterationEndsListener,
+  ShutdownListener,
+  StartupListener
+}
 import org.matsim.vehicles.VehicleCapacity
 
 import scala.collection.mutable
@@ -35,35 +43,63 @@ class BeamSim @Inject()(private val actorSystem: ActorSystem,
                         private val beamServices: BeamServices,
                         private val eventsManager: EventsManager,
                         private val scenario: Scenario,
-                       ) extends StartupListener with IterationEndsListener with ShutdownListener with LazyLogging {
+) extends StartupListener
+    with IterationEndsListener
+    with ShutdownListener
+    with LazyLogging {
 
   private var agentSimToPhysSimPlanConverter: AgentSimToPhysSimPlanConverter = _
   private implicit val timeout: Timeout = Timeout(50000, TimeUnit.SECONDS)
 
   private var createGraphsFromEvents: GraphsStatsAgentSimEventsListener = _
   private var modalityStyleStats: ModalityStyleStats = _
-  private var expectedDisutilityHeatMapDataCollector: ExpectedMaxUtilityHeatMap = _
+  private var expectedDisutilityHeatMapDataCollector
+    : ExpectedMaxUtilityHeatMap = _
 
   private var tncWaitingTimes: TNCWaitingTimesCollector = _
 
   override def notifyStartup(event: StartupEvent): Unit = {
-    beamServices.modeChoiceCalculatorFactory = ModeChoiceCalculator(beamServices.beamConfig.beam.agentsim.agents.modalBehaviors.modeChoiceClass, beamServices)
+    beamServices.modeChoiceCalculatorFactory = ModeChoiceCalculator(
+      beamServices.beamConfig.beam.agentsim.agents.modalBehaviors.modeChoiceClass,
+      beamServices)
 
     import scala.collection.JavaConverters._
     // Before we initialize router we need to scale the transit vehicle capacities
     val alreadyScaled: mutable.HashSet[VehicleCapacity] = mutable.HashSet()
-    scenario.getTransitVehicles.getVehicleTypes.asScala.foreach { case (_, vehType) =>
-      val theCap: VehicleCapacity = vehType.getCapacity
-      if (!alreadyScaled.contains(theCap)) {
-        theCap.setSeats(math.round(theCap.getSeats * beamServices.beamConfig.beam.agentsim.tuning.transitCapacity).toInt)
-        theCap.setStandingRoom(math.round(theCap.getStandingRoom * beamServices.beamConfig.beam.agentsim.tuning.transitCapacity).toInt)
-        alreadyScaled.add(theCap)
-      }
+    scenario.getTransitVehicles.getVehicleTypes.asScala.foreach {
+      case (_, vehType) =>
+        val theCap: VehicleCapacity = vehType.getCapacity
+        if (!alreadyScaled.contains(theCap)) {
+          theCap.setSeats(
+            math
+              .round(
+                theCap.getSeats * beamServices.beamConfig.beam.agentsim.tuning.transitCapacity)
+              .toInt)
+          theCap.setStandingRoom(
+            math
+              .round(
+                theCap.getStandingRoom * beamServices.beamConfig.beam.agentsim.tuning.transitCapacity)
+              .toInt)
+          alreadyScaled.add(theCap)
+        }
     }
 
-    val fareCalculator = new FareCalculator(beamServices.beamConfig.beam.routing.r5.directory)
-    val tollCalculator = new TollCalculator(beamServices.beamConfig.beam.routing.r5.directory)
-    beamServices.beamRouter = actorSystem.actorOf(BeamRouter.props(beamServices, transportNetwork, scenario.getNetwork, eventsManager, scenario.getTransitVehicles, fareCalculator, tollCalculator), "router")
+    val fareCalculator = new FareCalculator(
+      beamServices.beamConfig.beam.routing.r5.directory)
+    val tollCalculator = new TollCalculator(
+      beamServices.beamConfig.beam.routing.r5.directory)
+    beamServices.beamRouter = actorSystem.actorOf(
+      BeamRouter
+        .props(beamServices,
+               transportNetwork,
+               scenario.getNetwork,
+               eventsManager,
+               scenario.getTransitVehicles,
+               fareCalculator,
+               tollCalculator)
+        .withDispatcher("akka.actor.route-pinned-dispatcher"),
+      "router"
+    )
     Await.result(beamServices.beamRouter ? Identify(0), timeout.duration)
 
     /*    if(null != beamServices.beamConfig.beam.agentsim.taz.file && !beamServices.beamConfig.beam.agentsim.taz.file.isEmpty)
@@ -78,23 +114,38 @@ class BeamSim @Inject()(private val actorSystem: ActorSystem,
       beamServices.beamRouter,
       beamServices.beamConfig)
 
-    createGraphsFromEvents = new GraphsStatsAgentSimEventsListener(eventsManager, event.getServices.getControlerIO, scenario)
+    createGraphsFromEvents = new GraphsStatsAgentSimEventsListener(
+      eventsManager,
+      event.getServices.getControlerIO,
+      scenario)
     modalityStyleStats = new ModalityStyleStats()
-    expectedDisutilityHeatMapDataCollector = new ExpectedMaxUtilityHeatMap(eventsManager, scenario.getNetwork, event.getServices.getControlerIO, beamServices.beamConfig.beam.outputs.writeEventsInterval)
+    expectedDisutilityHeatMapDataCollector = new ExpectedMaxUtilityHeatMap(
+      eventsManager,
+      scenario.getNetwork,
+      event.getServices.getControlerIO,
+      beamServices.beamConfig.beam.outputs.writeEventsInterval)
 
     tncWaitingTimes = new TNCWaitingTimesCollector(eventsManager)
   }
 
   override def notifyIterationEnds(event: IterationEndsEvent): Unit = {
-    if(beamServices.beamConfig.beam.debug.debugEnabled)logger.info(DebugLib.gcAndGetMemoryLogMessage("notifyIterationEnds.start (after GC): "))
+    if (beamServices.beamConfig.beam.debug.debugEnabled)
+      logger.info(
+        DebugLib.gcAndGetMemoryLogMessage(
+          "notifyIterationEnds.start (after GC): "))
     agentSimToPhysSimPlanConverter.startPhysSim(event)
     createGraphsFromEvents.createGraphs(event)
     modalityStyleStats.processData(scenario.getPopulation(), event)
     modalityStyleStats.buildModalityStyleGraph()
-    PopulationWriterCSV(event.getServices.getScenario.getPopulation).write(event.getServices.getControlerIO.getIterationFilename(event.getIteration, "population.csv.gz"))
+    PopulationWriterCSV(event.getServices.getScenario.getPopulation).write(
+      event.getServices.getControlerIO
+        .getIterationFilename(event.getIteration, "population.csv.gz"))
 
     tncWaitingTimes.tellHistoryToRideHailIterationHistoryActor()
-    if(beamServices.beamConfig.beam.debug.debugEnabled)logger.info(DebugLib.gcAndGetMemoryLogMessage("notifyIterationEnds.end (after GC): "))
+    if (beamServices.beamConfig.beam.debug.debugEnabled)
+      logger.info(
+        DebugLib.gcAndGetMemoryLogMessage(
+          "notifyIterationEnds.end (after GC): "))
   }
 
   override def notifyShutdown(event: ShutdownEvent): Unit = {
@@ -102,16 +153,17 @@ class BeamSim @Inject()(private val actorSystem: ActorSystem,
     Await.result(actorSystem.terminate(), Duration.Inf)
 
     // remove output files which are not ready for release yet (enable again after Jan 2018)
-    val outputFilesToDelete = Array("traveldistancestats.txt", "traveldistancestats.png", "tmp"/*, "modestats.txt", "modestats.png"*/)
+    val outputFilesToDelete = Array(
+      "traveldistancestats.txt",
+      "traveldistancestats.png",
+      "tmp" /*, "modestats.txt", "modestats.png"*/ )
 
     outputFilesToDelete.foreach(deleteOutputFile)
 
     def deleteOutputFile(fileName: String) = {
       logger.debug(s"deleting output file: ${fileName}")
-      Files.deleteIfExists(Paths.get(event.getServices.getControlerIO.getOutputFilename(fileName)))
+      Files.deleteIfExists(
+        Paths.get(event.getServices.getControlerIO.getOutputFilename(fileName)))
     }
   }
 }
-
-
-
