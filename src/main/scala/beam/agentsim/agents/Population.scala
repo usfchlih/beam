@@ -8,17 +8,21 @@ import akka.pattern._
 import akka.util.Timeout
 import beam.agentsim
 import beam.agentsim.agents.BeamAgent.Finish
+import beam.agentsim.agents.choice.mode.ModeChoiceLCCM
 import beam.agentsim.agents.household.HouseholdActor
+import beam.agentsim.agents.household.HouseholdActor.AttributesOfIndividual
+import beam.agentsim.agents.modalBehaviors.ModeChoiceCalculator
 import beam.agentsim.agents.vehicles.BeamVehicle
-import beam.agentsim.agents.vehicles.BeamVehicleType.Car
+import beam.agentsim.agents.vehicles.BeamVehicleType.{Car, HumanBodyVehicle}
 import beam.agentsim.agents.vehicles.EnergyEconomyAttributes.Powertrain
+import beam.agentsim.scheduler.BeamAgentScheduler.ScheduleTrigger
 import beam.sim.BeamServices
 import com.conveyal.r5.transit.TransportNetwork
 import org.matsim.api.core.v01.population.Person
 import org.matsim.api.core.v01.{Coord, Id, Scenario}
 import org.matsim.core.api.experimental.events.EventsManager
 import org.matsim.households.Household
-import org.matsim.vehicles.Vehicles
+import org.matsim.vehicles.{VehicleUtils, Vehicles}
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
@@ -42,6 +46,43 @@ class Population(val scenario: Scenario, val beamServices: BeamServices, val sch
     personToHouseholdId = personToHouseholdId ++ matSimHousehold.getMemberIds.asScala.map(personId => personId -> householdId)
   }
 
+
+  // Every Person gets a HumanBodyVehicle
+
+  scenario.getPopulation.getPersons.values().stream().limit(beamServices.beamConfig.beam.agentsim.numAgents).forEach { matsimPerson =>
+    val bodyVehicleIdFromPerson = HumanBodyVehicle.createId(matsimPerson.getId)
+    val matsimBodyVehicle = VehicleUtils.getFactory.createVehicle(bodyVehicleIdFromPerson, HumanBodyVehicle.MatsimHumanBodyVehicleType)
+    // real vehicle( car, bus, etc.)  should be populated from config in notifyStartup
+      //let's put here human body vehicle too, it should be clean up on each iteration
+
+
+    val person = matsimPerson
+    val household = scenario.getHouseholds.getHouseholds.get(personToHouseholdId(matsimPerson.getId))
+    val householdVehicles = Population.getVehiclesFromHousehold(household, scenario.getVehicles)
+    val attributesOfIndividual = AttributesOfIndividual(person, household, householdVehicles)
+
+    val modeChoiceCalculator = beamServices.modeChoiceCalculatorFactory(attributesOfIndividual)
+
+
+    val personRef: ActorRef = context.actorOf(PersonAgent.props(scheduler,
+      beamServices,
+      modeChoiceCalculator,
+      transportNetwork,
+      router,
+      rideHailingManager,
+      eventsManager,
+      matsimPerson.getId,
+      scenario.getHouseholds.getHouseholds.get(personToHouseholdId(matsimPerson.getId)),
+      matsimPerson.getSelectedPlan,
+      bodyVehicleIdFromPerson),
+      matsimPerson.getId.toString)
+    context.watch(personRef)
+    val newBodyVehicle = new BeamVehicle(HumanBodyVehicle.powerTrainForHumanBody(), matsimBodyVehicle, None, HumanBodyVehicle)
+    newBodyVehicle.registerResource(personRef)
+    beamServices.vehicles += ((bodyVehicleIdFromPerson, newBodyVehicle))
+    scheduler ! ScheduleTrigger(InitializeTrigger(0.0), personRef)
+    beamServices.personRefs += ((matsimPerson.getId, personRef))
+  }
 
   // Init households before RHA.... RHA vehicles will initially be managed by households
   initHouseholds()
@@ -68,6 +109,7 @@ class Population(val scenario: Scenario, val beamServices: BeamServices, val sch
   }
 
   private def initHouseholds(iterId: Option[String] = None): Unit = {
+
     // Have to wait for households to create people so they can send their first trigger to the scheduler
     val houseHoldsInitialized = Future.sequence(scenario.getHouseholds.getHouseholds.values().asScala.map { household =>
       //TODO a good example where projection should accompany the data
