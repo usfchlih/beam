@@ -3,6 +3,7 @@ package beam.agentsim.agents.choice.mode
 import beam.router.Modes.BeamMode.CAR
 import beam.router.RoutingModel.EmbodiedBeamTrip
 import beam.sim.BeamServices
+import org.matsim.api.core.v01.Id
 
 /**
   * BEAM
@@ -22,7 +23,8 @@ object DrivingCostDefaults {
     alternatives.map{ alt =>
       alt.tripClassifier match {
         case CAR if alt.costEstimate == 0.0 =>
-          val vehicle = beamServices.vehicles(alt.legs.filter(_.beamLeg.mode == CAR).head.beamVehicleId)
+          val vehileId = Id.createVehicleId(alt.legs.filter(_.beamLeg.mode == CAR).head.beamVehicleId)
+          val vehicle = beamServices.vehicles(vehileId)
           val litersPerMeter = if(vehicle == null || vehicle.getType == null || vehicle.getType.getEngineInformation == null){
             DEFAULT_LITERS_PER_METER
           }else{

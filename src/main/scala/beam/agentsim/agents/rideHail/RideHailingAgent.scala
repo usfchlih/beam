@@ -62,7 +62,7 @@ class RideHailingAgent(override val id: Id[RideHailingAgent], val scheduler: Act
         vehicle.checkInResource(Some(SpaceTime(initialLocation,tick.toLong)),context.dispatcher)
         eventsManager.processEvent(new PersonDepartureEvent(tick, Id.createPersonId(id), null, "be_a_tnc_driver"))
         eventsManager.processEvent(new PersonEntersVehicleEvent(tick, Id.createPersonId(id), vehicle.id))
-        goto(Idle) replying CompletionNotice(triggerId) using data.copy(currentVehicle = Vector(vehicle.id))
+        goto(Idle) replying CompletionNotice(triggerId) using data.copy(currentVehicle = Vector(vehicle.id.toString))
       })
   }
 

@@ -68,6 +68,7 @@ class BeamRouter(services: BeamServices, transportNetwork: TransportNetwork, net
       val transitSchedule = initTransit(scheduler).map { case (k, v) => (k.toString, v) }
       val address = nodes.toIndexedSeq(ThreadLocalRandom.current.nextInt(nodes.size))
       val service = context.actorSelection(RootActorPath(address) / servicePathElements)
+      log.info("Sending TransitInited to {}", service.anchorPath)
       service ! TransitInited(transitSchedule)
       sender ! Success("success")
     case state: CurrentClusterState =>
@@ -90,6 +91,7 @@ class BeamRouter(services: BeamServices, transportNetwork: TransportNetwork, net
     case other =>
       val address = nodes.toIndexedSeq(ThreadLocalRandom.current.nextInt(nodes.size))
       val service = context.actorSelection(RootActorPath(address) / servicePathElements)
+      log.info("Sending {} to {}", other, service.anchorPath)
       service.forward(other)
   }
 
@@ -158,7 +160,7 @@ class BeamRouter(services: BeamServices, transportNetwork: TransportNetwork, net
               (departureTime: Long, duration: Int, vehicleId: Id[Vehicle]) =>
                 BeamPath(
                   edges.map(_.intValue()).toVector,
-                  Option(TransitStopsInfo(fromStop, vehicleId, toStop)),
+                  Option(TransitStopsInfo(fromStop, vehicleId.toString, toStop)),
                   SpaceTime(startEdge.getGeometry.getStartPoint.getX, startEdge.getGeometry.getStartPoint.getY, departureTime),
                   SpaceTime(endEdge.getGeometry.getEndPoint.getX, endEdge.getGeometry.getEndPoint.getY, departureTime + streetSeg.getDuration),
                   streetSeg.getDistance.toDouble / 1000)
@@ -169,7 +171,7 @@ class BeamRouter(services: BeamServices, transportNetwork: TransportNetwork, net
               (departureTime: Long, duration: Int, vehicleId: Id[Vehicle]) =>
                 BeamPath(
                   edgeIds,
-                  Option(TransitStopsInfo(fromStop, vehicleId, toStop)),
+                  Option(TransitStopsInfo(fromStop, vehicleId.toString, toStop)),
                   SpaceTime(startEdge.getGeometry.getStartPoint.getX, startEdge.getGeometry.getStartPoint.getY, departureTime),
                   SpaceTime(endEdge.getGeometry.getEndPoint.getX, endEdge.getGeometry.getEndPoint.getY, departureTime + duration),
                   services.geo.distLatLon2Meters(new Coord(startEdge.getGeometry.getStartPoint.getX, startEdge.getGeometry.getStartPoint.getY),
@@ -183,7 +185,7 @@ class BeamRouter(services: BeamServices, transportNetwork: TransportNetwork, net
           (departureTime: Long, duration: Int, vehicleId: Id[Vehicle]) =>
             BeamPath(
               edgeIds,
-              Option(TransitStopsInfo(fromStop, vehicleId, toStop)),
+              Option(TransitStopsInfo(fromStop, vehicleId.toString, toStop)),
               SpaceTime(startEdge.getGeometry.getStartPoint.getX, startEdge.getGeometry.getStartPoint.getY, departureTime),
               SpaceTime(endEdge.getGeometry.getEndPoint.getX, endEdge.getGeometry.getEndPoint.getY, departureTime + duration),
               services.geo.distLatLon2Meters(new Coord(startEdge.getGeometry.getStartPoint.getX, startEdge.getGeometry.getStartPoint.getY),

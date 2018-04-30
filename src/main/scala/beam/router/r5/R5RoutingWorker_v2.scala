@@ -22,7 +22,6 @@ import beam.router.osm.TollCalculator
 import beam.router.r5.R5RoutingWorker.TripWithFares
 import beam.router.r5.profile.BeamMcRaptorSuboptimalPathProfileRouter
 import beam.router.{Modes, RoutingModel}
-import beam.sim.RunBeamCluster.config
 import beam.sim.common.{GeoUtils, GeoUtilsImpl}
 import beam.sim.config.{BeamConfig, MatSimBeamConfigBuilder}
 import beam.sim.metrics.{Metrics, MetricsSupport}
@@ -55,7 +54,7 @@ class R5RoutingWorker_v2(val typesafeConfig: Config) extends Actor with ActorLog
   val outputDirectory = FileUtils.getConfigOutputFile(beamConfig.beam.outputs.baseOutputDirectory,
     beamConfig.beam.agentsim.simulationName, beamConfig.beam.outputs.addTimestampToOutputDirectory)
 
-  val matsimConfig = new MatSimBeamConfigBuilder(config).buildMatSamConf()
+  val matsimConfig = new MatSimBeamConfigBuilder(typesafeConfig).buildMatSamConf()
   matsimConfig.planCalcScore().setMemorizingExperiencedPlans(true)
 
   ReflectionUtils.setFinalField(classOf[StreetLayer], "LINK_RADIUS_METERS", 2000.0)
@@ -138,7 +137,7 @@ class R5RoutingWorker_v2(val typesafeConfig: Config) extends Actor with ActorLog
       }
       val duration = RoutingModel.traverseStreetLeg(leg, vehicleId, travelTime).map(e => e.getTime).max - leg.startTime
 
-      sender ! RoutingResponse(Vector(EmbodiedBeamTrip(Vector(EmbodiedBeamLeg(leg.copy(duration = duration.toLong), vehicleId, true, None, BigDecimal.valueOf(0), true)))))
+      sender ! RoutingResponse(Vector(EmbodiedBeamTrip(Vector(EmbodiedBeamLeg(leg.copy(duration = duration.toLong), vehicleId.toString, true, None, BigDecimal.valueOf(0), true)))))
   }
 
   case class R5Request(from: Coord, to: Coord, time: WindowTime, directMode: LegMode, accessMode: LegMode, transitModes: Seq[TransitModes], egressMode: LegMode)
@@ -392,7 +391,7 @@ class R5RoutingWorker_v2(val typesafeConfig: Config) extends Actor with ActorLog
               val body = routingRequest.streetVehicles.find(_.mode == WALK).get
               EmbodiedBeamLeg(beamLeg, body.id, body.asDriver, None, 0.0, unbecomeDriverAtComplete)
             } else {
-              EmbodiedBeamLeg(beamLeg, vehicle.id, vehicle.asDriver, None, cost, unbecomeDriverAtComplete)
+              EmbodiedBeamLeg(beamLeg, vehicle.id.toString, vehicle.asDriver, None, cost, unbecomeDriverAtComplete)
             }
           }
         }
@@ -426,7 +425,7 @@ class R5RoutingWorker_v2(val typesafeConfig: Config) extends Actor with ActorLog
                   SpaceTime(dest, routingRequest.departureTime.atTime + bushwhackingTime),
                   beelineDistanceInMeters)
               ),
-              maybeBody.get.id, maybeBody.get.asDriver, None, 0, unbecomeDriverOnCompletion = false)
+              maybeBody.get.id.toString, maybeBody.get.asDriver, None, 0, unbecomeDriverOnCompletion = false)
           )
         )
         RoutingResponse(embodiedTrips :+ dummyTrip)

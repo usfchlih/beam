@@ -64,7 +64,7 @@ class TransitDriverAgent(val scheduler: ActorRef, val beamServices: BeamServices
         eventsManager.processEvent(new PersonDepartureEvent(tick, Id.createPersonId(id), null, "be_a_transit_driver"))
         eventsManager.processEvent(new PersonEntersVehicleEvent(tick, Id.createPersonId(id), vehicle.id))
         val schedule = data.passengerSchedule.addLegs(legs)
-        goto(WaitingToDrive) using data.copy(currentVehicle = Vector(vehicle.id)).withPassengerSchedule(schedule).asInstanceOf[TransitDriverData] replying
+        goto(WaitingToDrive) using data.copy(currentVehicle = Vector(vehicle.id.toString)).withPassengerSchedule(schedule).asInstanceOf[TransitDriverData] replying
           CompletionNotice(triggerId, Vector(ScheduleTrigger(StartLegTrigger(schedule.schedule.firstKey.startTime, schedule.schedule.firstKey), self)))
       })
   }

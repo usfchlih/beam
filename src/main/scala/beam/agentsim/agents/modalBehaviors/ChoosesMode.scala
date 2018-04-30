@@ -52,7 +52,7 @@ trait ChoosesMode {
 
   when(ChoosingMode) ( transform {
     case Event(MobilityStatusReponse(streetVehicles), choosesModeData: ChoosesModeData) =>
-      val bodyStreetVehicle = StreetVehicle(bodyId, SpaceTime(currentActivity(choosesModeData.personData).getCoord, _currentTick.get.toLong), WALK, asDriver = true)
+      val bodyStreetVehicle = StreetVehicle(bodyId.toString, SpaceTime(currentActivity(choosesModeData.personData).getCoord, _currentTick.get.toLong), WALK, asDriver = true)
       val nextAct = nextActivity(choosesModeData.personData).right.get
       val departTime = DiscreteTime(_currentTick.get.toInt)
       val availablePersonalStreetVehicles = choosesModeData.personData.currentTourMode match {
@@ -248,19 +248,19 @@ trait ChoosesMode {
         availablePersonalStreetVehicles = availablePersonalStreetVehicles filterNot (_.id == personalVehicleUsed.get)
       }
       availablePersonalStreetVehicles.foreach { veh =>
-        context.parent ! ReleaseVehicleReservation(id, veh.id)
-        context.parent ! CheckInResource(veh.id, None)
+        context.parent ! ReleaseVehicleReservation(id.toString, veh.id.toString)
+        context.parent ! CheckInResource(Id.createVehicleId(veh.id), None)
       }
       if (chosenTrip.tripClassifier != RIDE_HAIL && data.rideHailingResult.get.proposals.nonEmpty) {
-        rideHailingManager ! ReleaseVehicleReservation(id, data.rideHailingResult.get.proposals.head
-          .rideHailingAgentLocation.vehicleId)
+        rideHailingManager ! ReleaseVehicleReservation(id.toString, data.rideHailingResult.get.proposals.head
+          .rideHailingAgentLocation.vehicleId.toString)
       }
       scheduler ! CompletionNotice(triggerId, Vector(ScheduleTrigger(PersonDepartureTrigger(math.max(chosenTrip.legs.head.beamLeg.startTime, tick)), self)))
       goto(WaitingForDeparture) using data.personData.copy(
         currentTrip = data.pendingChosenTrip,
         restOfCurrentTrip = data.pendingChosenTrip.get.legs.toList,
         currentTourMode = data.personData.currentTourMode.orElse(Some(chosenTrip.tripClassifier)),
-        currentTourPersonalVehicle = data.personData.currentTourPersonalVehicle.orElse(personalVehicleUsed)
+        currentTourPersonalVehicle = data.personData.currentTourPersonalVehicle.orElse(personalVehicleUsed).map(_.toString)
       )
   }
 }

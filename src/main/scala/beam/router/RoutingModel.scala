@@ -29,7 +29,7 @@ object RoutingModel {
 
     lazy val costEstimate: BigDecimal = legs.map(_.cost).sum /// Generalize or remove
     lazy val tripClassifier: BeamMode = determineTripMode(legs)
-    lazy val vehiclesInTrip: Vector[Id[Vehicle]] = determineVehiclesInTrip(legs)
+    lazy val vehiclesInTrip: Vector[String] = determineVehiclesInTrip(legs)
     lazy val requiresReservationConfirmation: Boolean = tripClassifier!= WALK && legs.exists(!_.asDriver)
 
     val totalTravelTime: Long = legs.map(_.beamLeg.duration).sum
@@ -68,7 +68,7 @@ object RoutingModel {
 
 
 
-    def determineVehiclesInTrip(legs: Vector[EmbodiedBeamLeg]): Vector[Id[Vehicle]] = {
+    def determineVehiclesInTrip(legs: Vector[EmbodiedBeamLeg]): Vector[String] = {
       legs.map(leg => leg.beamVehicleId).distinct
     }
     override def toString() = {
@@ -101,13 +101,13 @@ object RoutingModel {
   }
 
   case class EmbodiedBeamLeg(beamLeg: BeamLeg,
-                             beamVehicleId: Id[Vehicle],
+                             beamVehicleId: String,
                              asDriver: Boolean,
                              passengerSchedule: Option[PassengerSchedule],
                              cost: BigDecimal,
                              unbecomeDriverOnCompletion: Boolean
                             ) {
-    val isHumanBodyVehicle: Boolean = HumanBodyVehicle.isHumanBodyVehicle(beamVehicleId)
+    val isHumanBodyVehicle: Boolean = HumanBodyVehicle.isHumanBodyVehicle(Id.createVehicleId(beamVehicleId))
   }
 
   def traverseStreetLeg(leg: BeamLeg, vehicleId: Id[Vehicle], travelTimeByEnterTimeAndLinkId: (Long, Int) => Long): Iterator[Event] = {
@@ -127,7 +127,7 @@ object RoutingModel {
     }
   }
 
-  case class TransitStopsInfo(fromStopId: Int, vehicleId: Id[Vehicle], toStopId: Int)
+  case class TransitStopsInfo(fromStopId: Int, vehicleId: String, toStopId: Int)
 
   /**
     *

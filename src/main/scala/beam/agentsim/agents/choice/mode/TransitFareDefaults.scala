@@ -21,7 +21,7 @@ object TransitFareDefaults {
           alt.legs.foreach{ leg =>
             if(leg.beamVehicleId != vehId && faresByMode.contains(leg.beamLeg.mode) ){
               theFare = theFare + BigDecimal(faresByMode.get(leg.beamLeg.mode).get)
-              vehId = leg.beamVehicleId
+              vehId = Id.createVehicleId(leg.beamVehicleId)
             }
           }
           theFare

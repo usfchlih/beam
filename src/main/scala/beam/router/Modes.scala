@@ -16,7 +16,7 @@ import scala.collection.immutable
   */
 object Modes {
 
-  sealed abstract class BeamMode(val value: String, val r5Mode: Option[Either[LegMode,TransitModes]], val matsimMode: String) extends StringEnumEntry {
+  sealed abstract class BeamMode(val value: String, val r5Mode: Option[Either[LegMode,TransitModes]], val matsimMode: String) extends StringEnumEntry with java.io.Serializable {
     def isTransit(): Boolean = isR5TransitMode(this)
   }
 

@@ -272,7 +272,7 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
       completeReservation(Id.create(inquiryIDOption.get.toString, classOf[RideHailingInquiry]), triggersToSchedule)
 
     case ReleaseVehicleReservation(_, vehId) =>
-      lockedVehicles -= vehId
+      lockedVehicles -= Id.createVehicleId(vehId)
 
     case Finish =>
       log.info("finish message received from BeamAgentScheduler")
@@ -299,11 +299,11 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
   }
 
   private def createCustomerInquiryResponse(personId: Id[PersonAgent], customerPickUp: Location, departAt: BeamTime, destination: Location, rideHailingLocation: RideHailingAgentLocation): (Future[Any], Future[Any]) = {
-    val customerAgentBody = StreetVehicle(Id.createVehicleId(s"body-$personId"), SpaceTime((customerPickUp,
+    val customerAgentBody = StreetVehicle(Id.createVehicleId(s"body-$personId").toString, SpaceTime((customerPickUp,
       departAt.atTime)), WALK, asDriver = true)
-    val rideHailingVehicleAtOrigin = StreetVehicle(rideHailingLocation.vehicleId, SpaceTime(
+    val rideHailingVehicleAtOrigin = StreetVehicle(rideHailingLocation.vehicleId.toString, SpaceTime(
       (rideHailingLocation.currentLocation.loc, departAt.atTime)), CAR, asDriver = false)
-    val rideHailingVehicleAtPickup = StreetVehicle(rideHailingLocation.vehicleId, SpaceTime((customerPickUp,
+    val rideHailingVehicleAtPickup = StreetVehicle(rideHailingLocation.vehicleId.toString, SpaceTime((customerPickUp,
       departAt.atTime)), CAR, asDriver = false)
 
     //TODO: Error handling. In the (unlikely) event of a timeout, this RideHailingManager will silently be

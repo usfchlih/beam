@@ -41,7 +41,7 @@ trait DrivesVehicle[T <: DrivingData] extends BeamAgent[T] with HasServices {
 
   when(Driving) {
     case Event(TriggerWithId(EndLegTrigger(tick), triggerId), data) =>
-      val currentVehicleUnderControl = data.currentVehicle.head
+      val currentVehicleUnderControl =  Id.createVehicleId(data.currentVehicle.head)
       // If no manager is set, we ignore
       val currentLeg = data.passengerSchedule.schedule.keys.drop(data.currentLegPassengerScheduleIndex).head
       beamServices.vehicles(currentVehicleUnderControl).manager.foreach( _ ! NotifyResourceIdle(currentVehicleUnderControl,beamServices.geo.wgs2Utm(currentLeg.travelPath.endPoint)))
@@ -71,19 +71,20 @@ trait DrivesVehicle[T <: DrivingData] extends BeamAgent[T] with HasServices {
       data.passengerSchedule.schedule(newLeg).riders.foreach { personVehicle =>
         scheduler ! ScheduleTrigger(NotifyLegStartTrigger(tick, newLeg), beamServices.personRefs(personVehicle.personId))
       }
-      eventsManager.processEvent(new VehicleEntersTrafficEvent(tick, Id.createPersonId(id), null, data.currentVehicle.head, "car", 1.0))
+      val vehicle = Id.createVehicleId(data.currentVehicle.head)
+      eventsManager.processEvent(new VehicleEntersTrafficEvent(tick, Id.createPersonId(id), null, vehicle, "car", 1.0))
       // Produce link events for this trip (the same ones as in PathTraversalEvent).
       // TODO: They don't contain correct timestamps yet, but they all happen at the end of the trip!!
       // So far, we only throw them for ExperiencedPlans, which don't need timestamps.
-      RoutingModel.traverseStreetLeg(data.passengerSchedule.schedule.drop(data.currentLegPassengerScheduleIndex).head._1, data.currentVehicle.head, (_,_) => 0L)
+      RoutingModel.traverseStreetLeg(data.passengerSchedule.schedule.drop(data.currentLegPassengerScheduleIndex).head._1, vehicle, (_,_) => 0L)
         .foreach(eventsManager.processEvent)
       val endTime = tick + data.passengerSchedule.schedule.drop(data.currentLegPassengerScheduleIndex).head._1.duration
-      eventsManager.processEvent(new VehicleLeavesTrafficEvent(endTime, id.asInstanceOf[Id[Person]], null, data.currentVehicle.head, "car", 0.0))
+      eventsManager.processEvent(new VehicleLeavesTrafficEvent(endTime, id.asInstanceOf[Id[Person]], null, vehicle, "car", 0.0))
       goto(Driving) replying CompletionNotice(triggerId, Vector(ScheduleTrigger(EndLegTrigger(endTime), self)))
   }
 
   val drivingBehavior: StateFunction = {
-    case Event(req: ReservationRequest, data) if !hasRoomFor(data.passengerSchedule, req, beamServices.vehicles(data.currentVehicle.head)) =>
+    case Event(req: ReservationRequest, data) if !hasRoomFor(data.passengerSchedule, req, beamServices.vehicles(Id.createVehicleId(data.currentVehicle.head))) =>
       stay() replying ReservationResponse(req.requestId, Left(VehicleFullError))
 
     case Event(req: ReservationRequest, data) =>

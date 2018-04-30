@@ -80,7 +80,7 @@ class R5RoutingWorker(val beamServices: BeamServices, val transportNetwork: Tran
       }
       val duration = RoutingModel.traverseStreetLeg(leg, vehicleId, travelTime).map(e => e.getTime).max - leg.startTime
 
-      sender ! RoutingResponse(Vector(EmbodiedBeamTrip(Vector(EmbodiedBeamLeg(leg.copy(duration = duration.toLong), vehicleId, true, None, BigDecimal.valueOf(0), true)))))
+      sender ! RoutingResponse(Vector(EmbodiedBeamTrip(Vector(EmbodiedBeamLeg(leg.copy(duration = duration.toLong), vehicleId.toString, true, None, BigDecimal.valueOf(0), true)))))
   }
 
   case class R5Request(from: Coord, to: Coord, time: WindowTime, directMode: LegMode, accessMode: LegMode, transitModes: Seq[TransitModes], egressMode: LegMode)
@@ -332,9 +332,9 @@ class R5RoutingWorker(val beamServices: BeamServices, val transportNetwork: Tran
             val unbecomeDriverAtComplete = Modes.isR5LegMode(beamLeg.mode) && (beamLeg.mode != WALK || beamLeg == tripWithFares.trip.legs.last)
             if (beamLeg.mode == WALK) {
               val body = routingRequest.streetVehicles.find(_.mode == WALK).get
-              EmbodiedBeamLeg(beamLeg, body.id, body.asDriver, None, 0.0, unbecomeDriverAtComplete)
+              EmbodiedBeamLeg(beamLeg, body.id.toString, body.asDriver, None, 0.0, unbecomeDriverAtComplete)
             } else {
-              EmbodiedBeamLeg(beamLeg, vehicle.id, vehicle.asDriver, None, cost, unbecomeDriverAtComplete)
+              EmbodiedBeamLeg(beamLeg, vehicle.id.toString, vehicle.asDriver, None, cost, unbecomeDriverAtComplete)
             }
           }
         }
@@ -368,7 +368,7 @@ class R5RoutingWorker(val beamServices: BeamServices, val transportNetwork: Tran
                   SpaceTime(dest, routingRequest.departureTime.atTime + bushwhackingTime),
                   beelineDistanceInMeters)
               ),
-              maybeBody.get.id, maybeBody.get.asDriver, None, 0, unbecomeDriverOnCompletion = false)
+              maybeBody.get.id.toString, maybeBody.get.asDriver, None, 0, unbecomeDriverOnCompletion = false)
           )
         )
         RoutingResponse(embodiedTrips :+ dummyTrip)

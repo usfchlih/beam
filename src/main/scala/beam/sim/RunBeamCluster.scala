@@ -54,7 +54,7 @@ object RunBeamCluster extends BeamHelper with App {
     case _ =>
       throw new InvalidPathException("null", "invalid configuration file.")
   }
-
+  println(config.getString("beam.inputDirectory"))
 
   var clusterPort = argsMap.get("cluster-port").get
   config =
@@ -62,6 +62,7 @@ object RunBeamCluster extends BeamHelper with App {
           akka.remote.netty.tcp.port=${clusterPort}
           akka.remote.artery.canonical.port=$clusterPort
           """).withFallback(config)
+  println(config.getString("beam.inputDirectory"))
 
   val system = ActorSystem("ClusterSystem", config)
 

@@ -53,7 +53,7 @@ object HouseholdActor {
   }
 
 
-  case class ReleaseVehicleReservation(personId: Id[Person], vehId: Id[Vehicle])
+  case class ReleaseVehicleReservation(personId: String, vehId: String)
 
   case class MobilityStatusReponse(streetVehicle: Vector[StreetVehicle])
 
@@ -176,14 +176,16 @@ object HouseholdActor {
     override def receive: Receive = {
 
       case NotifyResourceIdle(vehId: Id[Vehicle], whenWhere) =>
-        _vehicleToStreetVehicle += (vehId -> StreetVehicle(vehId, whenWhere, CAR, asDriver = true))
+        _vehicleToStreetVehicle += (vehId -> StreetVehicle(vehId.toString, whenWhere, CAR, asDriver = true))
 
       case NotifyResourceInUse(vehId: Id[Vehicle], whenWhere) =>
-        _vehicleToStreetVehicle += (vehId -> StreetVehicle(vehId, whenWhere, CAR, asDriver = true))
+        _vehicleToStreetVehicle += (vehId -> StreetVehicle(vehId.toString, whenWhere, CAR, asDriver = true))
 
       case CheckInResource(vehicleId: Id[Vehicle], _) => checkInVehicleResource(vehicleId)
 
-      case ReleaseVehicleReservation(personId, vehId) =>
+      case ReleaseVehicleReservation(personIdStr, vehIdStr) =>
+        val personId = Id.createPersonId(personIdStr)
+        val vehId = Id.createVehicleId(vehIdStr)
         /*
          * Remove the mapping in _reservedForPerson if it exists. If the vehicle is not checked out, make available to all.
          */
@@ -215,8 +217,9 @@ object HouseholdActor {
 
         // Assign to requesting individual
         availableStreetVehicles.foreach { x =>
-          _availableVehicles.remove(x.id)
-          _checkedOutVehicles.put(x.id, personId)
+          val vehicleId = Id.createVehicleId(x.id)
+          _availableVehicles.remove(vehicleId)
+          _checkedOutVehicles.put(vehicleId, personId)
         }
         sender() ! MobilityStatusReponse(availableStreetVehicles)
 
@@ -280,7 +283,7 @@ object HouseholdActor {
       for {veh <- _vehicles} yield {
         //TODO following mode should come from the vehicle
         _vehicleToStreetVehicle = _vehicleToStreetVehicle +
-          (veh -> StreetVehicle(veh, initialLocation, CAR, asDriver = true))
+          (veh -> StreetVehicle(veh.toString, initialLocation, CAR, asDriver = true))
       }
     }
 
