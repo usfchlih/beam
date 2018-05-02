@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.Status.Success
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Stash}
+import akka.routing.{Broadcast, RoundRobinPool}
 import akka.util.Timeout
 import beam.agentsim.agents.vehicles.BeamVehicle
 import beam.agentsim.agents.vehicles.BeamVehicleType.TransitVehicle
@@ -48,32 +49,26 @@ class BeamRouter(services: BeamServices,
   private implicit val timeout = Timeout(50000, TimeUnit.SECONDS)
 
   private val config = services.beamConfig.beam.routing
-  private val routerWorker = (0 until 9).map(
-    i =>
-      context.actorOf(
-        R5RoutingWorker
-          .props(services,
-                 transportNetwork,
-                 network,
-                 fareCalculator,
-                 tollCalculator)
-          .withDispatcher("akka.actor.route-thread-pool-dispatcher"),
-        s"router-worker-$i"
-    ))
+  private val routerWorker = context.actorOf(
+    RoundRobinPool(10).props(
+      R5RoutingWorker
+        .props(services,
+               transportNetwork,
+               network,
+               fareCalculator,
+               tollCalculator)
+        .withDispatcher("akka.actor.route-thread-pool-dispatcher")),
+    "router-worker"
+  )
   private var numStopsNotFound = 0
 
   override def receive = {
     case InitTransit(scheduler) =>
       val transitSchedule = initTransit(scheduler)
-      routerWorker.foreach(_ ! TransitInited(transitSchedule))
+      routerWorker ! Broadcast(TransitInited(transitSchedule))
       sender ! Success("success")
-      context become balanced(0)
-  }
-
-  private def balanced(idx: Int): Receive = {
     case msg =>
-      routerWorker(idx % routerWorker.size).forward(msg)
-      context become balanced(idx + 1)
+      routerWorker.forward(msg)
   }
 
   /*

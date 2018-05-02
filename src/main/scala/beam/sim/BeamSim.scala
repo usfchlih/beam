@@ -3,8 +3,10 @@ package beam.sim
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{ActorSystem, Identify}
+import akka.actor.{ActorSystem, Identify, Props}
+import akka.cluster.Cluster
 import akka.pattern.ask
+import akka.routing.FromConfig
 import akka.util.Timeout
 import beam.agentsim.agents.modalBehaviors.ModeChoiceCalculator
 import beam.agentsim.agents.rideHail.TNCWaitingTimesCollector
@@ -88,19 +90,24 @@ class BeamSim @Inject()(private val actorSystem: ActorSystem,
       beamServices.beamConfig.beam.routing.r5.directory)
     val tollCalculator = new TollCalculator(
       beamServices.beamConfig.beam.routing.r5.directory)
-    beamServices.beamRouter = actorSystem.actorOf(
-      BeamRouter
-        .props(beamServices,
-               transportNetwork,
-               scenario.getNetwork,
-               eventsManager,
-               scenario.getTransitVehicles,
-               fareCalculator,
-               tollCalculator)
-        .withDispatcher("akka.actor.route-pinned-dispatcher"),
-      "router"
-    )
-    Await.result(beamServices.beamRouter ? Identify(0), timeout.duration)
+    if (Cluster(actorSystem).selfRoles.contains("worker")) {
+      actorSystem.actorOf(
+        BeamRouter
+          .props(beamServices,
+                 transportNetwork,
+                 scenario.getNetwork,
+                 eventsManager,
+                 scenario.getTransitVehicles,
+                 fareCalculator,
+                 tollCalculator)
+          .withDispatcher("akka.actor.route-pinned-dispatcher"),
+        "router"
+      )
+    } else if (Cluster(actorSystem).getSelfRoles.contains("base")) {
+      beamServices.beamRouter =
+        actorSystem.actorOf(FromConfig.props(Props.empty), name = "beamRouter")
+      Await.result(beamServices.beamRouter ? Identify(0), timeout.duration)
+    }
 
     /*    if(null != beamServices.beamConfig.beam.agentsim.taz.file && !beamServices.beamConfig.beam.agentsim.taz.file.isEmpty)
           beamServices.taz = TAZTreeMap.fromCsv(beamServices.beamConfig.beam.agentsim.taz.file)*/
