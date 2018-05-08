@@ -159,16 +159,28 @@ class RideHailingManager(val  beamServices: BeamServices, val scheduler: ActorRe
           val departureTime: BeamTime = DiscreteTime(0)
           val futureRnd1AgentResponse = router ? RoutingRequest(
             rnd1.currentLocation.loc, rnd2.currentLocation.loc, departureTime, Vector(), Vector()) //TODO what should go in vectors
+          val rnd1SentTime = System.currentTimeMillis()
+          log.info(s"Sent first random RoutingRequest")
+
           // get route from customer to destination
           val futureRnd2AgentResponse  = router ? RoutingRequest(
             rnd2.currentLocation.loc, rnd1.currentLocation.loc, departureTime, Vector(), Vector()) //TODO what should go in vectors
+
+          val rnd2SentTime = System.currentTimeMillis()
+          log.info(s"Sent second random RoutingRequest")
+
           for{
             rnd1Response <- futureRnd1AgentResponse.mapTo[RoutingResponse]
               .map { r => r.copy(responseReceivedAt = Some(ZonedDateTime.now(ZoneOffset.UTC)))}
+            rnd1ReceiveTime = System.currentTimeMillis()
+
             rnd2Response <- futureRnd2AgentResponse.mapTo[RoutingResponse]
               .map { r => r.copy(responseReceivedAt = Some(ZonedDateTime.now(ZoneOffset.UTC)))}
-
+            rnd2ReceiveTime = System.currentTimeMillis()
           } yield {
+            val rnd1Dt = rnd1ReceiveTime - rnd1SentTime
+            val rnd2Dt = rnd2ReceiveTime - rnd2SentTime
+            log.info("rnd1Dt: {} ms, rnd2Dt: {} ms", rnd1Dt, rnd2Dt)
             self ! RepositionResponse(rnd1, rnd2, rnd1Response, rnd2Response)
           }
         }
