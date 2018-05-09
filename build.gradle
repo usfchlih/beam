@@ -289,8 +289,7 @@ def getCurrentGitBranch() {
         if (result.exitValue() == 0) {
             gitBranch = result.text.trim()
         }
-    } catch (e) {
-    }
+    } catch (e) {}
     return gitBranch
 }
 
