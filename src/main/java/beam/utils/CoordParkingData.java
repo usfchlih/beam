@@ -1,29 +1,38 @@
 package beam.utils;
 
+import akka.protobuf.ByteString;
 import beam.analysis.via.CSVWriter;
 import beam.utils.coordmodel.*;
 import com.csvreader.CsvReader;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.commons.lang.StringUtils;
+import org.geotools.data.FeatureReader;
 import org.hsqldb.lib.StringUtil;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * Fetch Parking data from Coord API
+ * access_key may change after a period of time
+ */
 public class CoordParkingData {
     public static void main(String[] args) throws IOException {
         String filename = "";
 
         StringBuilder result = new StringBuilder();
-        String latitude = "37.761479";
+        /*String latitude = "37.761479";
         String longitude = "-122.448245";
         String radius = "7.8";
         String duration = "1";
         String access_key = "sandbox-DOGkYsosaV-oFVBVoh-gYKIFtpFdpJycYX5Tc2-_AWA";
-        String api = "https://api.sandbox.coord.co/v1/search/curbs/bylocation/all_rules?latitude=" + latitude + "&longitude=" + longitude + "&radius_km=" + radius + "&primary_use=park&access_key=" + access_key;
+        String api = "https://api.sandbox.coord.co/v1/search/curbs/bylocation/all_rules?latitude=" + latitude + "&longitude=" + longitude + "&radius_km=" + radius + "&access_key=" + access_key;
         String line;
         URL url = new URL(api);
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
@@ -34,24 +43,28 @@ public class CoordParkingData {
         }
         rd.close();
 
-//        GsonBuilder builder = new GsonBuilder();
-//        CoordDetail o = builder.create().fromJson(result.toString(), CoordDetail.class);
-
-//        CSVWriter csv = new CSVWriter("/home/abid/complete.json");
-//        csv.getBufferedWriter().append(result.toString());
-//        csv.getBufferedWriter().flush();
-//        csv.closeFile();
-//        FileReader fileReader = new FileReader(new File("/home/abid/complete.json"));
-//        BufferedReader rdr = new BufferedReader(fileReader);
-//        line = null;
-//        StringBuffer stringBuffer = new StringBuffer();
-//        while ((line = rdr.readLine()) != null) {
-//            stringBuffer.append(line);
-//        }
+        GsonBuilder builder = new GsonBuilder();
+        CoordDetail o = builder.create().fromJson(result.toString(), CoordDetail.class);
+*/
+/*
+    String startLongitude;
+    String startLatitude;
+    String endLongitude;
+    double feePerHour;
+    String endLatitude;
+    double totalNoParkingLength;
+    double totalNoStoppingLength;
+    double totalPaidParkingLength;
+    double totalMaxParkingDuration;
+    */
+        result = getDataFromFile();
 
         CoordDetail coordDetail = new GsonBuilder().create().fromJson(result.toString(), CoordDetail.class);
 
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuilder = new StringBuilder();
+
+        Map<String, OutputFormat> csvMap = new HashMap<>();
+        /*
         String header = "type,geometry.coordinates,geometry.type,properties.metadata.curb_id,properties.metadata.distance_end_meters,distance_start_meters,properties.metadata.end_street_name," +
                 "properties.metadata.side_of_street,properties.metadata.start_street_name,properties.metadata.street_name,properties.metadata.time_zone,properties.temporary_rules," +
                 "rules" +
@@ -62,86 +75,92 @@ public class CoordParkingData {
                 "properties.rules.time.days{}|properties.rules.times.time_of_day_start|properties.rules.times.time_of_day_end" +
                 "}]" +
                 "}]";
-        stringBuffer.append(header);
+        */
+//        stringBuilder.append(header);
+
+        List<Feature> features = coordDetail.getFeatures();
+        if (features == null || features.isEmpty()) {
+            throw new IOException("File is Empty or Invalid");
+        }
+        Double startLong = features.get(0).getGeometry().getCoordinates().get(0).get(0);
+        Double startLat = features.get(0).getGeometry().getCoordinates().get(0).get(1);
+        Double endLong = features.get(features.size() - 1).getGeometry().getCoordinates().get(features.get(features.size() - 1).getGeometry().getCoordinates().size() - 1).get(0);
+        Double endLat = features.get(features.size() - 1).getGeometry().getCoordinates().get(features.get(features.size() - 1).getGeometry().getCoordinates().size() - 1).get(1);
+        stringBuilder.append("StartLong:").append(startLong).append(",StartLat:").append(startLat).append("EndLong:").append(endLong).append(",EndLat:").append(endLat);
+
         for (Feature feature : coordDetail.getFeatures()) {
-            stringBuffer.append("\n" + feature.getType());
-            String coord = "[";
-            for (List<Double> coordinates : feature.getGeometry().getCoordinates()) {
-                coord += "{" + coordinates.get(0) + "|" + coordinates.get(1) + "}";
-            }
-            stringBuffer.append(",").append(coord).append("]");
-            stringBuffer.append(",").append(feature.getGeometry().getType());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getCurbId());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getDistanceEndMeters());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getDistanceStartMeters());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getEndStreetName());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getSideOfStreet());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getStartStreetName());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getStreetName());
-            stringBuffer.append(",").append(feature.getProperties().getMetadata().getTimeZone());
-            stringBuffer.append(",").append(feature.getProperties().getTemporaryRules());
+            String curbId = feature.getProperties().getMetadata().getCurbId();
+            OutputFormat outputFormat = null;
+            if (!csvMap.isEmpty())
+                outputFormat = csvMap.get(curbId);
 
-            stringBuffer.append(",[");
+            if (outputFormat == null)
+                outputFormat = new OutputFormat();
+
+
+            double startMeters = feature.getProperties().getMetadata().getDistanceStartMeters() == null ? 0.0 : feature.getProperties().getMetadata().getDistanceStartMeters();
+            double endMeters = feature.getProperties().getMetadata().getDistanceEndMeters();
+            long curbLength = Math.round((endMeters - startMeters) * 3.280839895013123);
+
+            System.out.print("\n" + curbLength + " FT ");
+
             for (Rule rule : feature.getProperties().getRules()) {
-                stringBuffer.append("{");
-                if (rule.getOtherVehiclesPermitted() == null || rule.getOtherVehiclesPermitted().isEmpty()) {
-                    stringBuffer.append("null");
+                if (rule.getPermitted().isEmpty()) {
+                    System.out.print(" " + OutputFormat.LengthHeading.NO_STOPPING);
+                    addLengthToMap(curbLength,outputFormat,OutputFormat.LengthHeading.NO_STOPPING);
                 } else {
-                    String otherVehiclesPermitted = "";
-                    for (Object other : rule.getOtherVehiclesPermitted()) {
-                        otherVehiclesPermitted += "|"+(String) other;
-                    }
-                    stringBuffer.append("|{").append(otherVehiclesPermitted.substring(1, otherVehiclesPermitted.length())).append("}");
-                }
-                stringBuffer.append("|").append(rule.getVehicleType());
-                stringBuffer.append("|{").append(StringUtils.join(rule.getPermitted(), "|")).append("}");
+                    for (Permitted permitted : rule.getPermitted()) {
+                        switch (permitted) {
+                            case PARK:
+                                List<Price> prices = rule.getPrice();
+                                Double pricePerHour = prices.get(0).getPricePerHour().getAmount();
+                                if (pricePerHour == null || pricePerHour == 0) {
 
-
-                if (rule.getPrice() == null || rule.getPrice().isEmpty()) {
-                    stringBuffer.append("|null");
-                } else {
-                    String pricePerHour = "";
-                    for (Price price : rule.getPrice()) {
-                        pricePerHour += "|" + price.getPricePerHour().getAmount() + price.getPricePerHour().getCurrency();
-                    }
-                    stringBuffer.append("|{" + pricePerHour.substring(1, pricePerHour.length()) + "}");
-                }
-
-                stringBuffer.append("|").append(rule.getPrimary());
-                stringBuffer.append("|").append(rule.getMaxDurationH());
-
-                if (rule.getTimes() == null || rule.getTimes().isEmpty()) {
-                    stringBuffer.append("|[{null");
-                    stringBuffer.append("|null");
-                    stringBuffer.append("|null}]");
-                } else {
-                    stringBuffer.append("|[");
-                    for (Time time : rule.getTimes()) {
-                        stringBuffer.append("{");
-                        if (time.getDays() == null || time.getDays().isEmpty()) {
-                            stringBuffer.append("{}");
-                        } else {
-                            String days = "";
-                            for (Integer day : time.getDays()) {
-                                days += "|" + day;
-                            }
-                            stringBuffer.append("{" + days.substring(1, days.length()) + "}");
+                                }
+                                break;
                         }
-                        stringBuffer.append("|").append(time.getTimeOfDayStart());
-                        stringBuffer.append("|").append(time.getTimeOfDayEnd());
-                        stringBuffer.append("}");
                     }
-                    stringBuffer.append("]");
                 }
-                stringBuffer.append("}");
             }
-            stringBuffer.append("]");
+
+            System.out.println("\nOUTPUT:\n" + stringBuilder);
+            csvMap.put(curbId, outputFormat);
         }
 
 
-        CSVWriter csv = new CSVWriter("sample.csv");
-        csv.getBufferedWriter().append(stringBuffer.toString());
+        /*CSVWriter csv = new CSVWriter("sample.csv");
+        csv.getBufferedWriter().append(stringBuilder.toString());
         csv.getBufferedWriter().flush();
-        csv.closeFile();
+        csv.closeFile();*/
     }
+
+    private static StringBuilder getDataFromFile() {
+        try (FileReader fileReader = new FileReader(new File("/home/abid/DEVELOPMENT/north/FILES/c2Y6MTQzODY.json")); BufferedReader rdr = new BufferedReader(fileReader)) {
+            StringBuilder result = new StringBuilder();
+//            CSVWriter csv = new CSVWriter("/home/abid/complete.json");
+//            csv.getBufferedWriter().append(result.toString());
+//            csv.getBufferedWriter().flush();
+//            csv.closeFile();;
+
+            String line = null;
+
+            while ((line = rdr.readLine()) != null) {
+                result.append(line);
+            }
+            return result;
+        } catch (IOException e) {
+            System.err.println("ERROR:" + e);
+            return null;
+        }
+    }
+
+    private static void addLengthToMap(double length, OutputFormat outputFormat, OutputFormat.LengthHeading lengthHeading) {
+        Double prevLength = outputFormat.getPermittedTypeLengthMap().get(lengthHeading);
+        if (prevLength == null) {
+            outputFormat.getPermittedTypeLengthMap().put(lengthHeading, length);
+        } else {
+            outputFormat.getPermittedTypeLengthMap().put(lengthHeading, outputFormat.getPermittedTypeLengthMap().get(lengthHeading) + prevLength);
+        }
+    }
+
 }

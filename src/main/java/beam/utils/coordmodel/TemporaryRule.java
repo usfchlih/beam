@@ -1,20 +1,29 @@
 
 package beam.utils.coordmodel;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 
 /**
- * The rules that apply along a particular segment of a curb during certain time periods.
- *
+ * A temporary rule that applies along a particular segment of curb. Rather than recurring
+ * on a weekly basis, temporary rules are scheduled once. These **always** take precedence
+ * over regular rules.
  * @author abid
  */
-public class Rule {
+public class TemporaryRule {
 
+    /**
+     * When this rule stops applying, in ISO 8601 format.
+     */
+    @SerializedName("end")
+    @Expose
+    private Date end;
     /**
      * The longest a vehicle may remain at this curb while engaged in a permitted use, in
      * hours.
@@ -54,16 +63,30 @@ public class Rule {
     private List<Price> price = null;
     @SerializedName("primary")
     @Expose
-    private Rule.Primary primary;
+    private TemporaryRule.Primary primary;
     /**
-     * The days and times of day when this rule applies.
+     * When this rule starts to apply, in ISO 8601 format.
      */
-    @SerializedName("times")
+    @SerializedName("start")
     @Expose
-    private List<Time> times = null;
+    private Date start;
     @SerializedName("vehicle_type")
     @Expose
-    private Rule.VehicleType vehicleType = Rule.VehicleType.fromValue("all");
+    private TemporaryRule.VehicleType vehicleType = TemporaryRule.VehicleType.fromValue("all");
+
+    /**
+     * When this rule stops applying, in ISO 8601 format.
+     */
+    public Date getEnd() {
+        return end;
+    }
+
+    /**
+     * When this rule stops applying, in ISO 8601 format.
+     */
+    public void setEnd(Date end) {
+        this.end = end;
+    }
 
     /**
      * The longest a vehicle may remain at this curb while engaged in a permitted use, in
@@ -100,8 +123,6 @@ public class Rule {
 
     /**
      * The uses that are permitted for vehicles not of this segment's primary vehicle type.
-     *
-     *
      */
     public void setOtherVehiclesPermitted(List<OtherVehiclesPermitted> otherVehiclesPermitted) {
         this.otherVehiclesPermitted = otherVehiclesPermitted;
@@ -109,7 +130,6 @@ public class Rule {
 
     /**
      * All the uses that are permitted, including the primary use.
-     *
      */
     public List<Permitted> getPermitted() {
         return permitted;
@@ -117,7 +137,6 @@ public class Rule {
 
     /**
      * All the uses that are permitted, including the primary use.
-     *
      */
     public void setPermitted(List<Permitted> permitted) {
         this.permitted = permitted;
@@ -126,14 +145,12 @@ public class Rule {
     /**
      * The price a vehicle must pay while on this segment. In general, this price applies regardless
      * of use or vehicle type.
-     *
+     * <p>
      * If a new rule starts applying, that rule's prices take effect, but counting from when the
      * vehicle first arrived. For instance, if a curb had:
-     *   * Parking at ${1} an hour until 8am;
-     *   * Parking at ${4} for the first hour and ${5} for the second hour thereafter,
+     * * Parking at ${1} an hour until 8am;
+     * * Parking at ${4} for the first hour and ${5} for the second hour thereafter,
      * A vehicle arriving at 7am would pay ${1} for the first hour and ${5} for the second.
-     *
-     *
      */
     public List<Price> getPrice() {
         return price;
@@ -142,48 +159,44 @@ public class Rule {
     /**
      * The price a vehicle must pay while on this segment. In general, this price applies regardless
      * of use or vehicle type.
-     *
+     * <p>
      * If a new rule starts applying, that rule's prices take effect, but counting from when the
      * vehicle first arrived. For instance, if a curb had:
-     *   * Parking at ${1} an hour until 8am;
-     *   * Parking at ${4} for the first hour and ${5} for the second hour thereafter,
+     * * Parking at ${1} an hour until 8am;
+     * * Parking at ${4} for the first hour and ${5} for the second hour thereafter,
      * A vehicle arriving at 7am would pay ${1} for the first hour and ${5} for the second.
-     *
-     *
      */
     public void setPrice(List<Price> price) {
         this.price = price;
     }
 
-    public Rule.Primary getPrimary() {
+    public TemporaryRule.Primary getPrimary() {
         return primary;
     }
 
-    public void setPrimary(Rule.Primary primary) {
+    public void setPrimary(TemporaryRule.Primary primary) {
         this.primary = primary;
     }
 
     /**
-     * The days and times of day when this rule applies.
-     *
+     * When this rule starts to apply, in ISO 8601 format.
      */
-    public List<Time> getTimes() {
-        return times;
+    public Date getStart() {
+        return start;
     }
 
     /**
-     * The days and times of day when this rule applies.
-     *
+     * When this rule starts to apply, in ISO 8601 format.
      */
-    public void setTimes(List<Time> times) {
-        this.times = times;
+    public void setStart(Date start) {
+        this.start = start;
     }
 
-    public Rule.VehicleType getVehicleType() {
+    public TemporaryRule.VehicleType getVehicleType() {
         return vehicleType;
     }
 
-    public void setVehicleType(Rule.VehicleType vehicleType) {
+    public void setVehicleType(TemporaryRule.VehicleType vehicleType) {
         this.vehicleType = vehicleType;
     }
 
@@ -198,10 +211,10 @@ public class Rule {
         @SerializedName("none")
         NONE("none");
         private final String value;
-        private static final Map<String, Rule.Primary> CONSTANTS = new HashMap<>();
+        private static final Map<String, TemporaryRule.Primary> CONSTANTS = new HashMap<>();
 
         static {
-            for (Rule.Primary c : values()) {
+            for (TemporaryRule.Primary c : values()) {
                 CONSTANTS.put(c.value, c);
             }
         }
@@ -219,8 +232,8 @@ public class Rule {
             return this.value;
         }
 
-        public static Rule.Primary fromValue(String value) {
-            Rule.Primary constant = CONSTANTS.get(value);
+        public static TemporaryRule.Primary fromValue(String value) {
+            TemporaryRule.Primary constant = CONSTANTS.get(value);
             if (constant == null) {
                 throw new IllegalArgumentException(value);
             } else {
@@ -243,10 +256,10 @@ public class Rule {
         @SerializedName("motorcycle")
         MOTORCYCLE("motorcycle");
         private final String value;
-        private static final Map<String, Rule.VehicleType> CONSTANTS = new HashMap<>();
+        private static final Map<String, TemporaryRule.VehicleType> CONSTANTS = new HashMap<>();
 
         static {
-            for (Rule.VehicleType c : values()) {
+            for (TemporaryRule.VehicleType c : values()) {
                 CONSTANTS.put(c.value, c);
             }
         }
@@ -264,8 +277,8 @@ public class Rule {
             return this.value;
         }
 
-        public static Rule.VehicleType fromValue(String value) {
-            Rule.VehicleType constant = CONSTANTS.get(value);
+        public static TemporaryRule.VehicleType fromValue(String value) {
+            TemporaryRule.VehicleType constant = CONSTANTS.get(value);
             if (constant == null) {
                 throw new IllegalArgumentException(value);
             } else {
