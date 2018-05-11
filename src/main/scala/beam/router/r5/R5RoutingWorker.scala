@@ -1,7 +1,7 @@
 package beam.router.r5
 
-import java.time.temporal.ChronoUnit
-import java.time.{ZoneId, ZonedDateTime}
+import java.time.temporal.{ChronoUnit, Temporal}
+import java.time.{ZoneId, ZoneOffset, ZonedDateTime}
 import java.util
 
 import akka.actor._
@@ -37,12 +37,20 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import scala.language.postfixOps
 
+import scala.concurrent.duration._
+
 class R5RoutingWorker(val beamServices: BeamServices, val transportNetwork: TransportNetwork, val network: Network, val fareCalculator: FareCalculator, tollCalculator: TollCalculator) extends Actor with ActorLogging with MetricsSupport {
   val distanceThresholdToIgnoreWalking = beamServices.beamConfig.beam.agentsim.thresholdForWalkingInMeters // meters
   val BUSHWHACKING_SPEED_IN_METERS_PER_SECOND = 0.447 // 1 mile per hour
 
   var maybeTravelTime: Option[TravelTime] = None
   var transitSchedule: Map[Id[Vehicle], (RouteInfo, Seq[BeamLeg])] = Map()
+
+  var msgs: Long = 0
+  var firstMsgTime: Option[ZonedDateTime] = None
+
+  val tickTask = context.system.scheduler.schedule(2.seconds, 10.seconds, self, "tick")(context.dispatcher)
+
 
   val cache = CacheBuilder.newBuilder().recordStats().maximumSize(1000).build(new CacheLoader[R5Request, ProfileResponse] {
     override def load(key: R5Request) = {
@@ -55,9 +63,17 @@ class R5RoutingWorker(val beamServices: BeamServices, val transportNetwork: Tran
   import context.dispatcher
 
   override final def receive: Receive = {
+    case "tick" if firstMsgTime.isDefined =>
+      val seconds = ChronoUnit.SECONDS.between(firstMsgTime.get, ZonedDateTime.now(ZoneOffset.UTC))
+      val rate = msgs.toDouble / seconds
+      log.info(s"Receiving $rate per seconds of RoutingRequest")
+
     case TransitInited(newTransitSchedule) =>
       transitSchedule = newTransitSchedule
     case request: RoutingRequest =>
+      if (firstMsgTime.isEmpty)
+        firstMsgTime = Some(ZonedDateTime.now(ZoneOffset.UTC))
+      msgs += 1
       val eventualResponse = Future {
 
         latency("request-router-time", Metrics.RegularLevel) {
