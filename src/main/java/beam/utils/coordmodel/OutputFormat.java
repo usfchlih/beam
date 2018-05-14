@@ -10,22 +10,35 @@ import java.util.*;
  * @author abid
  */
 public class OutputFormat {
+    private String curbId;
     private String startLongitude;
     private String startLatitude;
     private String endLongitude;
-    private double feePerHour;
+    private String feePerHour;
     private String endLatitude;
-    private double totalCurbLength;
-    private double totalNoParkingLength;
-    private double totalNoStoppingLength;
-    private double totalPaidParkingLength;
+    private long totalCurbLength;
+    private long totalNoParkingLength;
+    private long totalNoStoppingLength;
+    private long totalFreeParkingLength;
+    private long totalPaidParkingLength;
+    private long totalLoadingZoneLength;
+    private long totalPassengerLoadingZoneLength;
     private double maxParkingDuration;
+
     private OutputFormat.LengthHeading lengthHeading;
     //    private Map<Integer, EnumMap<Permitted, String>> mapDayData;
-    private Map<LengthHeading, Double> permittedTypeLengthMap;
+    private Map<LengthHeading, Long> permittedTypeLengthMap;
+
+    public String getCurbId() {
+        return curbId;
+    }
+
+    public void setCurbId(String curbId) {
+        this.curbId = curbId;
+    }
 
     public OutputFormat() {
-        permittedTypeLengthMap = new EnumMap<LengthHeading, Double>(LengthHeading.class);
+        permittedTypeLengthMap = new EnumMap<LengthHeading, Long>(LengthHeading.class);
     }
 
     public String getStartLongitude() {
@@ -52,11 +65,11 @@ public class OutputFormat {
         this.endLongitude = endLongitude;
     }
 
-    public double getFeePerHour() {
+    public String getFeePerHour() {
         return feePerHour;
     }
 
-    public void setFeePerHour(double feePerHour) {
+    public void setFeePerHour(String feePerHour) {
         this.feePerHour = feePerHour;
     }
 
@@ -72,7 +85,7 @@ public class OutputFormat {
         return totalCurbLength;
     }
 
-    public void setTotalCurbLength(double totalCurbLength) {
+    public void setTotalCurbLength(long totalCurbLength) {
         this.totalCurbLength = totalCurbLength;
     }
 
@@ -80,7 +93,7 @@ public class OutputFormat {
         return totalNoParkingLength;
     }
 
-    public void setTotalNoParkingLength(double totalNoParkingLength) {
+    public void setTotalNoParkingLength(long totalNoParkingLength) {
         this.totalNoParkingLength = totalNoParkingLength;
     }
 
@@ -88,16 +101,40 @@ public class OutputFormat {
         return totalNoStoppingLength;
     }
 
-    public void setTotalNoStoppingLength(double totalNoStoppingLength) {
+    public void setTotalNoStoppingLength(long totalNoStoppingLength) {
         this.totalNoStoppingLength = totalNoStoppingLength;
+    }
+
+    public long getTotalFreeParkingLength() {
+        return totalFreeParkingLength;
+    }
+
+    public void setTotalFreeParkingLength(long totalFreeParkingLength) {
+        this.totalFreeParkingLength = totalFreeParkingLength;
     }
 
     public double getTotalPaidParkingLength() {
         return totalPaidParkingLength;
     }
 
-    public void setTotalPaidParkingLength(double totalPaidParkingLength) {
+    public void setTotalPaidParkingLength(long totalPaidParkingLength) {
         this.totalPaidParkingLength = totalPaidParkingLength;
+    }
+
+    public long getTotalLoadingZoneLength() {
+        return totalLoadingZoneLength;
+    }
+
+    public void setTotalLoadingZoneLength(long totalLoadingZoneLength) {
+        this.totalLoadingZoneLength = totalLoadingZoneLength;
+    }
+
+    public long getTotalPassengerLoadingZoneLength() {
+        return totalPassengerLoadingZoneLength;
+    }
+
+    public void setTotalPassengerLoadingZoneLength(long totalPassengerLoadingZoneLength) {
+        this.totalPassengerLoadingZoneLength = totalPassengerLoadingZoneLength;
     }
 
     public double getMaxParkingDuration() {
@@ -116,7 +153,7 @@ public class OutputFormat {
 //        this.mapDayData.put(dayNum, val);
 //    }
 
-    public Map<LengthHeading, Double> getPermittedTypeLengthMap() {
+    public Map<LengthHeading, Long> getPermittedTypeLengthMap() {
         return this.permittedTypeLengthMap;
     }
 
@@ -127,6 +164,26 @@ public class OutputFormat {
 
     public void setLengthHeading(OutputFormat.LengthHeading lengthHeading) {
         this.lengthHeading = lengthHeading;
+    }
+
+    @Override
+    public String toString() {
+        return "OutputFormat{" +
+                "curbId=" + curbId +
+                ", startLongitude=" + startLongitude +
+                ", startLatitude=" + startLatitude +
+                ", endLongitude=" + endLongitude +
+                ", feePerHour=" + feePerHour +
+                ", endLatitude=" + endLatitude +
+                ", totalCurbLength=" + totalCurbLength +
+                ", totalNoParkingLength=" + totalNoParkingLength +
+                ", totalNoStoppingLength=" + totalNoStoppingLength +
+                ", totalFreeParkingLength=" + totalFreeParkingLength +
+                ", totalPaidParkingLength=" + totalPaidParkingLength +
+                ", totalLoadingZoneLength=" + totalLoadingZoneLength +
+                ", totalPassengerLoadingZoneLength=" + totalPassengerLoadingZoneLength +
+                ", maxParkingDuration=" + maxParkingDuration +
+                '}';
     }
 
     public enum LengthHeading {

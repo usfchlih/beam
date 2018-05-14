@@ -13,10 +13,7 @@ import org.hsqldb.lib.StringUtil;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Fetch Parking data from Coord API
@@ -25,6 +22,10 @@ import java.util.Map;
 public class CoordParkingData {
     public static void main(String[] args) throws IOException {
         String filename = "";
+        long totalCurbLength = 0;
+        double minPricePerHour = 0;
+        double maxPricePerHour = 0;
+        double maxParkingDuration = 0;
 
         StringBuilder result = new StringBuilder();
         /*String latitude = "37.761479";
@@ -42,21 +43,10 @@ public class CoordParkingData {
             result.append(line);
         }
         rd.close();
-
-        GsonBuilder builder = new GsonBuilder();
-        CoordDetail o = builder.create().fromJson(result.toString(), CoordDetail.class);
 */
-/*
-    String startLongitude;
-    String startLatitude;
-    String endLongitude;
-    double feePerHour;
-    String endLatitude;
-    double totalNoParkingLength;
-    double totalNoStoppingLength;
-    double totalPaidParkingLength;
-    double totalMaxParkingDuration;
-    */
+        /**
+         * using file for test purpose
+         */
         result = getDataFromFile();
 
         CoordDetail coordDetail = new GsonBuilder().create().fromJson(result.toString(), CoordDetail.class);
@@ -65,16 +55,7 @@ public class CoordParkingData {
 
         Map<String, OutputFormat> csvMap = new HashMap<>();
         /*
-        String header = "type,geometry.coordinates,geometry.type,properties.metadata.curb_id,properties.metadata.distance_end_meters,distance_start_meters,properties.metadata.end_street_name," +
-                "properties.metadata.side_of_street,properties.metadata.start_street_name,properties.metadata.street_name,properties.metadata.time_zone,properties.temporary_rules," +
-                "rules" +
-                "[{" +
-                "properties.rules.other_vehicles_permitted|properties.rules.vehicle_type|properties.rules.permitted{}|properties.rules.price.price_per_hour{}|properties.rules.primary|properties.rules.max_duration|" +
-                "times" +
-                "[{" +
-                "properties.rules.time.days{}|properties.rules.times.time_of_day_start|properties.rules.times.time_of_day_end" +
-                "}]" +
-                "}]";
+        String header = "curbId,startLongitude,startLatitude,endLongitude,feePerHour,endLatitude,totalCurbLength,totalNoParkingLength,totalNoStoppingLength,totalFreeParkingLength,totalPaidParkingLength,totalLoadingZoneLength,totalPassengerLoadingZoneLength,maxParkingDuration"
         */
 //        stringBuilder.append(header);
 
@@ -88,46 +69,101 @@ public class CoordParkingData {
         Double endLat = features.get(features.size() - 1).getGeometry().getCoordinates().get(features.get(features.size() - 1).getGeometry().getCoordinates().size() - 1).get(1);
         stringBuilder.append("StartLong:").append(startLong).append(",StartLat:").append(startLat).append("EndLong:").append(endLong).append(",EndLat:").append(endLat);
 
+
         for (Feature feature : coordDetail.getFeatures()) {
             String curbId = feature.getProperties().getMetadata().getCurbId();
             OutputFormat outputFormat = null;
             if (!csvMap.isEmpty())
                 outputFormat = csvMap.get(curbId);
 
-            if (outputFormat == null)
+            if (outputFormat == null) {
+                totalCurbLength = 0;
+                minPricePerHour = maxPricePerHour = 0;
+                maxParkingDuration = 0;
                 outputFormat = new OutputFormat();
-
+                outputFormat.setCurbId(curbId);
+                outputFormat.setStartLatitude("" + startLat);
+                outputFormat.setStartLongitude("" + startLong);
+                outputFormat.setEndLatitude("" + endLat);
+                outputFormat.setEndLongitude("" + endLong);
+            }
 
             double startMeters = feature.getProperties().getMetadata().getDistanceStartMeters() == null ? 0.0 : feature.getProperties().getMetadata().getDistanceStartMeters();
             double endMeters = feature.getProperties().getMetadata().getDistanceEndMeters();
             long curbLength = Math.round((endMeters - startMeters) * 3.280839895013123);
+            totalCurbLength = totalCurbLength + curbLength;
 
             System.out.print("\n" + curbLength + " FT ");
 
+            Set<String> permittedSet = new HashSet<>();
             for (Rule rule : feature.getProperties().getRules()) {
                 if (rule.getPermitted().isEmpty()) {
-                    System.out.print(" " + OutputFormat.LengthHeading.NO_STOPPING);
+                    permittedSet.add(OutputFormat.LengthHeading.NO_STOPPING.toString());
                     addLengthToMap(curbLength,outputFormat,OutputFormat.LengthHeading.NO_STOPPING);
                 } else {
-                    for (Permitted permitted : rule.getPermitted()) {
-                        switch (permitted) {
-                            case PARK:
-                                List<Price> prices = rule.getPrice();
-                                Double pricePerHour = prices.get(0).getPricePerHour().getAmount();
-                                if (pricePerHour == null || pricePerHour == 0) {
-
-                                }
-                                break;
+                    if ( rule.getPermitted().contains(Permitted.PARK)) {
+                        List<Price> prices = rule.getPrice();
+                        Double pricePerHour = prices.get(0).getPricePerHour().getAmount();
+                        if (pricePerHour == null || pricePerHour == 0) {
+                            permittedSet.add(OutputFormat.LengthHeading.FREE_PARKING.toString());
+                            addLengthToMap(curbLength, outputFormat, OutputFormat.LengthHeading.FREE_PARKING);
+                        } else if (pricePerHour > 0) {
+                            pricePerHour = pricePerHour / 100;
+                            if (minPricePerHour > pricePerHour) {
+                                minPricePerHour = pricePerHour;
+                            }
+                            if (maxPricePerHour < pricePerHour) {
+                                maxPricePerHour = pricePerHour;
+                            }
+                            permittedSet.add(OutputFormat.LengthHeading.PAID_PARKING.toString());
+                            addLengthToMap(curbLength, outputFormat, OutputFormat.LengthHeading.PAID_PARKING);
                         }
                     }
                 }
             }
 
-            System.out.println("\nOUTPUT:\n" + stringBuilder);
+            outputFormat.setTotalCurbLength(totalCurbLength);
+            for (OutputFormat.LengthHeading item : outputFormat.getPermittedTypeLengthMap().keySet()) {
+                long val = outputFormat.getPermittedTypeLengthMap().get(item);
+                switch (item) {
+                    case NO_STOPPING:
+                        outputFormat.setTotalNoStoppingLength(val);
+                        break;
+                    case FREE_PARKING:
+                        outputFormat.setTotalFreeParkingLength(val);
+                        break;
+                    case PAID_PARKING:
+                        outputFormat.setTotalPaidParkingLength(val);
+                        break;
+                    case LOADING_ZONE:
+                        outputFormat.setTotalLoadingZoneLength(val);
+                        break;
+                    case NO_PARKING:
+                        outputFormat.setTotalNoParkingLength(val);
+                        break;
+                    case PASSENGER_LOADING_ZONE:
+                        outputFormat.setTotalPassengerLoadingZoneLength(val);
+                        break;
+                    default:
+                        continue;
+                }
+            }
+
+            for (String item : permittedSet) {
+                System.out.print(" " + item);
+            }
+
+            String feePerHour = (minPricePerHour == maxPricePerHour) ? "" + minPricePerHour : minPricePerHour + "-" + maxPricePerHour;
+            /*if (minPricePerHour == maxPricePerHour || minPricePerHour == 0) {
+                feePerHour = "" + maxPricePerHour;
+            } else {
+                feePerHour = minPricePerHour + "-" + maxPricePerHour;
+            }*/
+            outputFormat.setFeePerHour(feePerHour);
             csvMap.put(curbId, outputFormat);
         }
 
-
+        System.out.println("\n\n" + csvMap.get("c2Y6MTQzODY"));
         /*CSVWriter csv = new CSVWriter("sample.csv");
         csv.getBufferedWriter().append(stringBuilder.toString());
         csv.getBufferedWriter().flush();
@@ -137,11 +173,6 @@ public class CoordParkingData {
     private static StringBuilder getDataFromFile() {
         try (FileReader fileReader = new FileReader(new File("/home/abid/DEVELOPMENT/north/FILES/c2Y6MTQzODY.json")); BufferedReader rdr = new BufferedReader(fileReader)) {
             StringBuilder result = new StringBuilder();
-//            CSVWriter csv = new CSVWriter("/home/abid/complete.json");
-//            csv.getBufferedWriter().append(result.toString());
-//            csv.getBufferedWriter().flush();
-//            csv.closeFile();;
-
             String line = null;
 
             while ((line = rdr.readLine()) != null) {
@@ -154,12 +185,12 @@ public class CoordParkingData {
         }
     }
 
-    private static void addLengthToMap(double length, OutputFormat outputFormat, OutputFormat.LengthHeading lengthHeading) {
-        Double prevLength = outputFormat.getPermittedTypeLengthMap().get(lengthHeading);
+    private static void addLengthToMap(long length, OutputFormat outputFormat, OutputFormat.LengthHeading lengthHeading) {
+        Long prevLength = outputFormat.getPermittedTypeLengthMap().get(lengthHeading);
         if (prevLength == null) {
             outputFormat.getPermittedTypeLengthMap().put(lengthHeading, length);
         } else {
-            outputFormat.getPermittedTypeLengthMap().put(lengthHeading, outputFormat.getPermittedTypeLengthMap().get(lengthHeading) + prevLength);
+            outputFormat.getPermittedTypeLengthMap().put(lengthHeading, prevLength + length);
         }
     }
 
