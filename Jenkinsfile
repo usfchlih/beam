@@ -8,8 +8,6 @@ if(env.BRANCH_NAME == 'master') {
     println 'This happens only on master'
     //TODO master build
 
-
-
 }  else {
 
   stage '4ci'
