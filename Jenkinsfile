@@ -7,6 +7,7 @@ pipeline {
         sh './gradlew assemble'
       }
     }
+    
     stage('build') {
       
       steps {
