@@ -3,7 +3,9 @@ pipeline {
 
 stages {
     stage('build') {
-      steps {
+//TODO
+
+steps {
         sh './gradlew build'
       }
 
