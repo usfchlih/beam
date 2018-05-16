@@ -7,7 +7,8 @@ pipeline {
     //TODO master build
 
   }  else {
-    stage '4ci'
+
+  stage '4ci'
     println "Current branch ${env.BRANCH_NAME}"
     //TODO branches build
 
