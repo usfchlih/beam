@@ -1,7 +1,9 @@
 pipeline {
   agent any
   
-  if(env.BRANCH_NAME == 'master') {
+
+
+if(env.BRANCH_NAME == 'master') {
     stage 'Only on master'
     println 'This happens only on master'
     //TODO master build
