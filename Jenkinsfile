@@ -1,8 +1,6 @@
 pipeline {
   agent any
-
-
-
+  //TODO
 stages {
     stage('build') {
       steps {
