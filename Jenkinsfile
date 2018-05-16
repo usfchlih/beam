@@ -1,7 +1,5 @@
 pipeline {
   agent any
-  
-
 
 if(env.BRANCH_NAME == 'master') {
     stage 'Only on master'
