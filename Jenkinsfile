@@ -13,6 +13,12 @@ pipeline {
       }
     }
     stage('build-master') {
+      agent {
+        node {
+          label 'ec2'
+        }
+        
+      }
       when {
         branch 'master'
       }
@@ -21,14 +27,26 @@ pipeline {
       }
     }
     stage('build-master-periodic') {
+      agent {
+        node {
+          label 'ec2'
+        }
+        
+      }
       when {
         branch 'master'
       }
       steps {
-        sh './gradlew build'
+        sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
     }
     stage('build-4ci') {
+      agent {
+        node {
+          label 'ec2'
+        }
+        
+      }
       when {
         branch 'origin/**4ci**'
       }
