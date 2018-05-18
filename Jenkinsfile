@@ -6,7 +6,17 @@ pipeline {
   			label 'ec2' 
   		} 
   	}
+  	options {
+        timeout(time: 1, unit: 'HOURS') 
+    }
 	stages {
+
+		stage('scm') {
+            steps {
+                checkout scm
+            }
+        }
+
 	    stage('build-master') {
 
 	    	when {
