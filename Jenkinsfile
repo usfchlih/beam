@@ -8,9 +8,9 @@ pipeline {
         }
         
       }
-      when {
-        branch 'master'
-      }
+      //when {
+        //branch 'master'
+      //}
       steps {
         git(url: 'https://github.com/usfchlih/beam', branch: 'master', poll: true, changelog: true, credentialsId: 'usfchlih')
         sh './gradlew build'
@@ -23,9 +23,9 @@ pipeline {
         }
         
       }
-      when {
-        branch 'master'
-      }
+     // when {
+       // branch 'master'
+      //}
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
@@ -37,9 +37,9 @@ pipeline {
         }
         
       }
-      when {
-        branch 'origin/**4ci**'
-      }
+      //when {
+        //branch 'origin/**4ci**'
+      //}
       steps {
         sh './gradlew build'
       }
