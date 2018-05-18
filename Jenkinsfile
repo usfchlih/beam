@@ -2,6 +2,12 @@ pipeline {
   agent none
   stages {
     stage('scm') {
+      agent {
+        node {
+          label 'ec2'
+        }
+        
+      }
       steps {
         checkout scm
       }
