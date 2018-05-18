@@ -1,10 +1,5 @@
 pipeline {
-  agent {
-    node {
-      label 'ec2'
-    }
-    
-  }
+  agent none
   stages {
     stage('scm') {
       steps {
