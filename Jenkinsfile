@@ -1,17 +1,6 @@
 pipeline {
   agent none
   stages {
-    stage('scm') {
-      agent {
-        node {
-          label 'ec2'
-        }
-        
-      }
-      steps {
-        checkout scm
-      }
-    }
     stage('build-master') {
       agent {
         node {
@@ -24,6 +13,7 @@ pipeline {
       }
       steps {
         sh './gradlew build'
+        git(url: 'https://github.com/usfchlih/beam', branch: 'master', poll: true, changelog: true, credentialsId: 'usfchlih')
       }
     }
     stage('build-master-periodic') {
