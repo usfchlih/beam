@@ -1,5 +1,5 @@
 pipeline {
-  agent none
+  agent any
   stages {
     stage('build-master') {
       agent {
@@ -12,7 +12,7 @@ pipeline {
         branch 'master'
       }
       steps {
-      	git(url: 'https://github.com/usfchlih/beam', branch: 'master', poll: true, changelog: true, credentialsId: 'usfchlih')
+        git(url: 'https://github.com/usfchlih/beam', branch: 'master', poll: true, changelog: true, credentialsId: 'usfchlih')
         sh './gradlew build'
       }
     }
