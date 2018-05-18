@@ -36,7 +36,8 @@ pipeline {
 	        }
 
 	      steps {
-	        sh './gradlew build periodicTest -PappArgs="['--config', 'test/input/sf-light/sf-light.conf']" -PmaxRAM=31g'
+	        sh './gradlew build'
+	        //periodicTest -PappArgs="['--config', 'test/input/sf-light/sf-light.conf']" -PmaxRAM=31g
 	      }
 	    
 	    }
