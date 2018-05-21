@@ -1,21 +1,22 @@
 pipeline {
-  
-  agent { label 'jenkins-slave' }
-  stages {
+  agent {
+    node {
+      label 'ec2'
+    }
     
-    stage('build') {  
+  }
+  stages {
+    stage('build') {
       steps {
         sh './gradlew build'
       }
     }
-   
     stage('build-periodicTest') {
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
     }
   }
-
   options {
     timeout(time: 1, unit: 'HOURS')
   }
