@@ -1,6 +1,6 @@
 pipeline {
   
-  agent none
+  agent { label 'ec2' }
 
   stages {
     agent { label 'ec2' }
