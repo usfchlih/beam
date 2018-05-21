@@ -1,9 +1,9 @@
 pipeline {
   
-  agent { label 'ec2' }
+  agent none
 
   stages {
-  
+    agent { label 'ec2' }
     stage('build') {
       steps {
         sh './gradlew build'
@@ -11,6 +11,7 @@ pipeline {
     }
   
     stage('build-periodicTest') {
+      agent { label 'ec2' }
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
