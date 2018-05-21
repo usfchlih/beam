@@ -2,7 +2,7 @@ pipeline {
   
   agent {
         node {
-          label 'ec2'
+          label 'jenkins-slave'
         }
  
   stages {
