@@ -6,6 +6,7 @@ pipeline {
     agent { label 'ec2' }
     stage('build') {
       steps {
+        checkout scm
         sh './gradlew build'
       }
     }
