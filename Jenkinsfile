@@ -1,6 +1,6 @@
 pipeline {
    agent {
-        node {
+        node('master') {
           label 'ec2'
         }     
    }
