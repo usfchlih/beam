@@ -1,7 +1,6 @@
 pipeline {
   
-  agent { label 'ec2' }
-
+  agent { label 'jenkins-slave' }
   stages {
     
     stage('build') {  
@@ -16,7 +15,7 @@ pipeline {
       }
     }
   }
-  
+
   options {
     timeout(time: 1, unit: 'HOURS')
   }
