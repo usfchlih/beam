@@ -1,20 +1,20 @@
 pipeline {
   
   agent {
-        node('/origin/**4ci**') {
+        node {
           label 'ec2'
         }
  
   stages {
     
-    stage('build-master') {  
+    stage('build') {  
       }
       steps {
         sh './gradlew build'
       }
     }
    
-    stage('build-master-periodic') {
+    stage('build-periodicTest') {
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
