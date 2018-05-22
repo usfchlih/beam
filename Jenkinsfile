@@ -1,11 +1,11 @@
 pipeline {
 
-  agent { label "ec2" }
+  agent { label "i-00f83862c1f875f7f" }
 
   stages {
     
     stage('build') {
-      when { branch "origin/master" || branch "/origin/**4ci**" }
+      when { branch "/origin/master" || branch "/origin/**4ci**" }
       steps {
         checkout scm
         sh './gradlew clean build'
