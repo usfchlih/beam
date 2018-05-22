@@ -1,28 +1,27 @@
 pipeline {
-   agent {
-        node('master') {
-          label 'ec2'
-        }     
-   }
+
+  agent { label "ec2" }
+
   stages {
-
-    stage('clone') {
-     	checkout scm
-    }  	
-
-    stage('build-master') {
-      steps {
-        sh './gradlew build'
-      }
-    }
     
-    stage('build-master-periodic') {
+    stage('build') {
+      when { branch "origin/master" || branch "/origin/**4ci**" }
       steps {
-        sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
+        checkout scm
+        sh './gradlew clean build'
       }
     }
+    stage('build-periodicTest') {
+      when { branch "origin/master" }
+      steps {
+        sh './gradlew clean build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
+      }
+    }
+ 
   }
+  
   options {
     timeout(time: 1, unit: 'HOURS')
   }
+
 }
