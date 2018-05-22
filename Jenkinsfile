@@ -3,6 +3,7 @@ pipeline {
   agent none
 
   stages {
+    
     stage('build') {
       agent any
       steps {
@@ -10,7 +11,6 @@ pipeline {
         sh './gradlew clean build'
       }
     }
-  
     stage('build-periodicTest') {
       agent any
       steps {
