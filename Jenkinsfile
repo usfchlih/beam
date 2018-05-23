@@ -13,7 +13,6 @@ pipeline {
         }
       }
     }
-
     stage('build-periodicTest') {
       node('ec2'){
         when { branch "origin/master" }
