@@ -6,16 +6,17 @@ pipeline {
         }
  
   stages {
-    
     stage('build') {  
       }
       steps {
+        checkout scm
         sh './gradlew build'
       }
     }
    
     stage('build-periodicTest') {
       steps {
+        checkout scm
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
     }
