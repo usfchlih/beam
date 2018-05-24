@@ -6,6 +6,7 @@ pipeline {
         branch 'master'
       }
       steps {
+        checkout scm
         sh './gradlew build'
       }
     }
