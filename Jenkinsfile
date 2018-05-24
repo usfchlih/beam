@@ -4,7 +4,6 @@ pipeline {
         node{
           label 'ec2'
         }
- 
   stages {
     stage('build') {  
       }
