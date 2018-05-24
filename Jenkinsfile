@@ -17,10 +17,6 @@ pipeline {
       }
     }
     stage('build-4ci') {
-      agent {
-        node {
-          label 'ec2'
-        }
         
       }
       when {
