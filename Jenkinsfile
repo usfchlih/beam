@@ -16,7 +16,6 @@ pipeline {
         node {
           label 'ec2'
         }
-        
       }
       when {
         branch 'origin/**4ci**'
