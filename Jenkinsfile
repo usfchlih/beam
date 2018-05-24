@@ -14,6 +14,7 @@ pipeline {
         sh './gradlew clean build'
       }
     }
+    
     stage('build-periodicTest') {
       when { branch "origin/master" }
       steps {
