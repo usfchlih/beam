@@ -1,7 +1,6 @@
 pipeline {
 
   agent { label "ec2" }
-
   stages {    
     stage('build') {
       when { branch "origin/master" || branch "/origin/**4ci**" }
