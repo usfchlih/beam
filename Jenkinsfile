@@ -7,7 +7,6 @@ pipeline {
   }
 
   stages {
-    
     stage('build') {
       when { branch "/origin/master" || branch "/origin/**4ci**" }
       steps {
