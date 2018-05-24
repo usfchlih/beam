@@ -3,7 +3,6 @@ pipeline {
   stages {
     stage('build-master') {
       steps {
-        checkout scm
         sh './gradlew build'
       }
     }
