@@ -12,7 +12,6 @@ pipeline {
         branch 'master'
       }
       steps {
-        git(url: 'https://github.com/usfchlih/beam', branch: 'master', poll: true, changelog: true, credentialsId: 'usfchlih')
         sh './gradlew build'
       }
     }
