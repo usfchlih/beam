@@ -11,12 +11,6 @@ pipeline {
       }
     }
     stage('build-master-periodic') {
-      agent {
-        node {
-          label 'ec2'
-        }
-        
-      }
       when {
         branch 'master'
       }
