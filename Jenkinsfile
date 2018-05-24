@@ -11,11 +11,6 @@ pipeline {
       }
     }
     stage('build-master-periodic') {
-      agent {
-        node {
-          label 'ec2'
-        }
-        
       }
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
