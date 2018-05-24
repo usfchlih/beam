@@ -2,8 +2,7 @@ pipeline {
 
   agent { label "ec2" }
 
-  stages {
-    
+  stages {    
     stage('build') {
       when { branch "origin/master" || branch "/origin/**4ci**" }
       steps {
