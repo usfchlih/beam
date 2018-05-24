@@ -2,12 +2,6 @@ pipeline {
   agent none
   stages {
     stage('build-master') {
-      agent {
-        node {
-          label 'ec2'
-        }
-        
-      }
       when {
         branch 'master'
       }
