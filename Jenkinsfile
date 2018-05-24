@@ -7,9 +7,6 @@ pipeline {
       }
     }
     stage('build-master-periodic') {
-      when {
-        branch 'master'
-      }
       steps {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
