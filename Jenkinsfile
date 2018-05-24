@@ -7,7 +7,6 @@ pipeline {
     stage('build') {
       when { branch "origin/master" || branch "/origin/**4ci**" }
       steps {
-        checkout scm
         sh './gradlew clean build'
       }
     }
@@ -15,7 +14,6 @@ pipeline {
     stage('build-periodicTest') {
       when { branch "origin/master" }
       steps {
-        checkout scm
         sh './gradlew clean build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
     }
