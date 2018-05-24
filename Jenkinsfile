@@ -5,6 +5,7 @@ pipeline {
               label "ec2" 
           }
   }
+
   stages {
     stage('build') {
       when { branch "/origin/master" || branch "/origin/**4ci**" }
@@ -13,6 +14,7 @@ pipeline {
         sh './gradlew clean build'
       }
     }
+
     stage('build-periodicTest') {
       when { branch "origin/master" }
       steps {
