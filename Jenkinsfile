@@ -19,9 +19,6 @@ pipeline {
     }
     stage('build-4ci') {
       }
-      when {
-        branch 'origin/**4ci**'
-      }
       steps {
         sh './gradlew build'
       }
