@@ -8,7 +8,8 @@ pipeline {
         }
       }
      steps {
-        sh './gradlew build'
+
+         sh './gradlew build'
       }
     }
     stage('build-master-periodic') {
