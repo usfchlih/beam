@@ -21,6 +21,7 @@ pipeline {
     stage('build-4ci-regex') {
       }
       steps {
+
         sh './gradlew build'
       }
     }
