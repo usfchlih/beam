@@ -16,6 +16,8 @@ pipeline {
         sh './gradlew build periodicTest -PappArgs="[\'--config\', \'test/input/sf-light/sf-light.conf\']" -PmaxRAM=31g'
       }
     }
+
+
     stage('build-4ci-regex') {
       }
       steps {
