@@ -7,7 +7,6 @@ pipeline {
           label 'ec2'
         }
       }
-
     steps {
 
          sh './gradlew build'
