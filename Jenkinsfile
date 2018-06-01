@@ -4,7 +4,6 @@ pipeline {
         node('/origin/**4ci**') {
           label 'ec2'
         }
- 
   stages {
     
     stage('build-master') {  
