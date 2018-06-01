@@ -8,7 +8,6 @@ pipeline {
         }
       }
     steps {
-
          sh './gradlew build'
       }
     }
