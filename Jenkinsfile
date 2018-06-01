@@ -1,10 +1,11 @@
 pipeline {
   agent { 
           node {
+            //TODO
             label "ec2" 
           }
   }
-//TODO
+  //TODO
   stages {
     stage('build') {
       when { branch "/origin/master" || branch "/origin/**4ci**" }
